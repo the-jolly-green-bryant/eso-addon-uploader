@@ -5,6 +5,8 @@ Bethesda login, addon management, and an experimental publishing workflow.
 
 **Live site:** [eso-addon-uploader.bryantjames.com](https://eso-addon-uploader.bryantjames.com)
 
+**Developer docs:** [docs.eso-addon-uploader.bryantjames.com](https://docs.eso-addon-uploader.bryantjames.com)
+
 > This is an independent community project. It is not affiliated with,
 > endorsed by, or supported by Bethesda Softworks, ZeniMax Online Studios, or
 > The Elder Scrolls Online.

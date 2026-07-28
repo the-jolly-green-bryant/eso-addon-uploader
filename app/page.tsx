@@ -20,6 +20,7 @@ import {
   closeOutline,
   cloudUploadOutline,
   createOutline,
+  codeSlashOutline,
   logInOutline,
   logOutOutline,
   personCircleOutline,
@@ -222,6 +223,7 @@ export default function Home() {
         <nav aria-label="Primary">
           <button className={tab === "explore" ? "active" : ""} onClick={() => setTab("explore")}>Explore</button>
           <button className={tab === "mine" ? "active" : ""} onClick={() => account ? setTab("mine") : setLoginOpen(true)}>My addons</button>
+          <a href="https://docs.eso-addon-uploader.bryantjames.com"><IonIcon icon={codeSlashOutline} /> For Devs</a>
         </nav>
         {account ? (
           <div className="account">

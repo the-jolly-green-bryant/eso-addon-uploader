@@ -31,7 +31,7 @@ button { color: inherit; }
 .brand strong { display: block; font: 700 18px Georgia, serif; letter-spacing: .04em; }
 .brand small { display: block; color: var(--gold); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; }
 .topbar nav { display: flex; gap: 32px; align-self: stretch; }
-.topbar nav button { border: 0; background: transparent; cursor: pointer; position: relative; font-weight: 600; color: var(--ink-soft); }
+.topbar nav button, .topbar nav a { border: 0; background: transparent; cursor: pointer; position: relative; font-weight: 600; color: var(--ink-soft); display: flex; align-items: center; gap: 5px; text-decoration: none; font-size: 13px; }
 .topbar nav button.active { color: var(--ink); }
 .topbar nav button.active::after { content: ""; height: 3px; left: 0; right: 0; bottom: 0; position: absolute; background: var(--gold); border-radius: 3px 3px 0 0; }
 .login-button, .catalog-head ion-button { justify-self: end; --border-radius: 999px; --box-shadow: none; text-transform: none; font-weight: 700; }

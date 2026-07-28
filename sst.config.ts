@@ -14,6 +14,7 @@ export default $config({
     const site = new sst.aws.Nextjs("WayrestWorkshop", {
       domain: {
         name: "eso-addon-uploader.bryantjames.com",
+        aliases: ["docs.eso-addon-uploader.bryantjames.com"],
         dns: sst.cloudflare.dns(),
       },
       environment: {

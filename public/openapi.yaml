@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info:
+  title: Wayrest Workshop API
+  version: 0.1.0
+  description: |
+    Unofficial same-origin adapter for browsing and managing Elder Scrolls
+    Online addons. This specification documents the open-source adapter, not
+    an official Bethesda API. Operations marked `x-protocol-status: inferred`
+    may change as upstream behavior is explored.
+  license:
+    name: MIT
+    identifier: MIT
+externalDocs:
+  description: Developer guides and protocol notes
+  url: https://docs.eso-addon-uploader.bryantjames.com
+servers:
+  - url: https://eso-addon-uploader.bryantjames.com
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+tags:
+  - name: Catalog
+  - name: Session
+  - name: Author
+  - name: Packages
+paths:
+  /api/bethesda/catalog:
+    get:
+      tags: [Catalog]
+      summary: Search the public addon catalog
+      operationId: searchAddons
+      x-protocol-status: confirmed
+      parameters:
+        - {$ref: "#/components/parameters/Text"}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Size"}
+        - name: categories
+          in: query
+          schema: {type: string}
+        - name: author_displayname
+          in: query
+          schema: {type: string}
+        - name: hardware_platforms
+          in: query
+          schema: {type: string, default: "WINDOWS,PLAYSTATION5,XBOXSERIESX"}
+        - name: sort
+          in: query
+          schema: {type: string, default: utime}
+        - name: order
+          in: query
+          schema: {type: string, enum: [asc, desc], default: desc}
+      responses:
+        "200":
+          description: Catalog page, or preview mode when the server application key is absent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/Addon"}
+                  preview: {type: boolean}
+  /api/bethesda/download:
+    get:
+      tags: [Packages]
+      summary: Reconstruct the latest Windows release as a ZIP
+      operationId: downloadAddon
+      x-protocol-status: confirmed
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Reconstructed addon archive.
+          headers:
+            Content-Disposition:
+              schema: {type: string}
+          content:
+            application/zip:
+              schema: {type: string, contentEncoding: binary}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /api/bethesda/login:
+    post:
+      tags: [Session]
+      summary: Start a Bethesda author session
+      operationId: login
+      x-protocol-status: observed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string, format: password, writeOnly: true}
+      responses:
+        "200":
+          description: Authenticated. Sets an HttpOnly session cookie.
+          headers:
+            Set-Cookie:
+              schema: {type: string}
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [username]
+                properties:
+                  username: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "503":
+          description: Server application key is not configured.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+  /api/bethesda/logout:
+    post:
+      tags: [Session]
+      summary: End the current author session
+      operationId: logout
+      x-protocol-status: observed
+      security: [{sessionCookie: []}]
+      responses:
+        "200":
+          description: Local cookie cleared; upstream logout attempted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean, const: true}
+  /api/bethesda/me:
+    get:
+      tags: [Author]
+      summary: List addons owned by the current author
+      operationId: listMyAddons
+      x-protocol-status: confirmed
+      security: [{sessionCookie: []}]
+      responses:
+        "200":
+          description: Author identity and owned addon records.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username: {type: string}
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/Addon"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/bethesda/addons:
+    post:
+      tags: [Author]
+      summary: Create an unpublished addon draft
+      operationId: createAddon
+      x-protocol-status: confirmed
+      security: [{sessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AddonInput"}
+      responses:
+        "201":
+          description: Draft created.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Addon"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/bethesda/addons/{id}:
+    put:
+      tags: [Author]
+      summary: Update owned addon metadata
+      operationId: updateAddon
+      x-protocol-status: observed
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AddonInput"}
+      responses:
+        "200":
+          description: Updated addon.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Addon"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/bethesda/upload:
+    post:
+      tags: [Packages]
+      summary: Upload an addon release archive
+      operationId: uploadAddon
+      description: Experimental initiate, binary PUT, and complete sequence.
+      x-protocol-status: inferred
+      security: [{sessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [archive, addonId]
+              properties:
+                archive: {type: string, contentMediaType: application/zip, contentEncoding: binary}
+                addonId: {type: string, format: uuid}
+                version: {type: string, default: 1.0.0}
+                note: {type: string}
+      responses:
+        "200":
+          description: Upstream completion response.
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "413":
+          description: Archive exceeds 200 MB.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
+        "502":
+          description: Upload handshake, transfer, or completion failed.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/UploadError"}
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: wayrest_bnet_session
+      description: HttpOnly cookie set by the login endpoint.
+  parameters:
+    Text:
+      name: text
+      in: query
+      schema: {type: string}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    Size:
+      name: size
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 30}
+  schemas:
+    Addon:
+      type: object
+      required: [content_id, title]
+      additionalProperties: true
+      properties:
+        content_id: {type: string, format: uuid}
+        title: {type: string}
+        overview: {type: string}
+        description: {type: string}
+        author_displayname: {type: string}
+        categories:
+          type: array
+          items: {type: string}
+        hardware_platforms:
+          type: array
+          items: {type: string}
+        published: {type: boolean}
+        status: {type: string}
+    AddonInput:
+      type: object
+      required: [title, overview, description]
+      properties:
+        title: {type: string}
+        overview: {type: string, maxLength: 180}
+        description: {type: string}
+        category: {type: string, default: User Interface}
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string}
+    UploadError:
+      allOf:
+        - {$ref: "#/components/schemas/Error"}
+        - type: object
+          properties:
+            phase:
+              type: string
+              enum: [initiate, initiate-schema, binary, complete]
+  responses:
+    BadRequest:
+      description: Invalid or missing input.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    Unauthorized:
+      description: Author session is missing or expired.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    NotFound:
+      description: Addon or release not found.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
