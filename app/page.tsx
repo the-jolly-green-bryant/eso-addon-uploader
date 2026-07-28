@@ -88,6 +88,12 @@ const samples: Addon[] = [
 const formatCount = (count = 0) =>
   new Intl.NumberFormat("en", { notation: "compact" }).format(count);
 
+const mirrorUrl = (contentId: string) =>
+  `https://github.com/the-jolly-green-bryant/eso-addon-mirror/search?q=${encodeURIComponent(contentId)}&type=code`;
+
+const downloadUrl = (contentId: string) =>
+  `/api/bethesda/download?id=${encodeURIComponent(contentId)}`;
+
 export default function Home() {
   const [tab, setTab] = useState<"explore" | "mine">("explore");
   const [query, setQuery] = useState("");
@@ -299,6 +305,14 @@ export default function Home() {
                   <span><IonIcon icon={arrowDownOutline} /> {formatCount(addon.stats?.totals?.downloads)}</span>
                   <span>{addon.hardware_platforms?.length || 0} platforms</span>
                   {tab === "mine" && <button onClick={() => { setSelected(addon); setEditorOpen(true); }}><IonIcon icon={createOutline} /> Edit</button>}
+                  <div className="card-actions">
+                    <a href={mirrorUrl(addon.content_id)} target="_blank" rel="noreferrer">
+                      <IonIcon icon={codeSlashOutline} /> View mirror
+                    </a>
+                    <a className="card-download" href={downloadUrl(addon.content_id)} download>
+                      <IonIcon icon={arrowDownOutline} /> Download ZIP
+                    </a>
+                  </div>
                 </footer>
               </article>
             ))}
@@ -383,11 +397,14 @@ function AddonDetail({ addon, onClose }: { addon: Addon; onClose: () => void }) 
           <div><strong>{formatCount(addon.stats?.totals?.subscribes)}</strong><span>subscribers</span></div>
           <div><strong>{latest?.version_name || "Latest"}</strong><span>version</span></div>
         </div>
-        {files.length ? (
-          <a className="download" href={`/api/bethesda/download?id=${addon.content_id}`}><IonIcon icon={arrowDownOutline} /> Download latest ZIP</a>
-        ) : (
-          <a className="download" href={`/api/bethesda/download?id=${addon.content_id}`}><IonIcon icon={arrowDownOutline} /> Prepare download</a>
-        )}
+        <div className="detail-actions">
+          <a className="mirror-link" href={mirrorUrl(addon.content_id)} target="_blank" rel="noreferrer">
+            <IonIcon icon={codeSlashOutline} /> View source mirror
+          </a>
+          <a className="download" href={downloadUrl(addon.content_id)} download>
+            <IonIcon icon={arrowDownOutline} /> {files.length ? "Download latest ZIP" : "Prepare ZIP download"}
+          </a>
+        </div>
       </div>
     </div>
   );
