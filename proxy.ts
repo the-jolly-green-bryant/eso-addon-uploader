@@ -10,7 +10,9 @@ export function proxy(request: NextRequest) {
     !pathname.startsWith("/docs")
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = pathname === "/" ? "/docs" : `/docs${pathname}`;
+    if (pathname === "/robots.txt") url.pathname = "/docs/robots.txt";
+    else if (pathname === "/sitemap.xml") url.pathname = "/docs/sitemap.xml";
+    else url.pathname = pathname === "/" ? "/docs" : `/docs${pathname}`;
     return NextResponse.rewrite(url);
   }
 
