@@ -30,6 +30,7 @@ import {
 } from "ionicons/icons";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { track } from "../lib/analytics";
 
 setupIonicReact();
 
@@ -95,8 +96,8 @@ const mirrorUrl = (contentId: string) =>
 const downloadUrl = (contentId: string) =>
   `/api/bethesda/download?id=${encodeURIComponent(contentId)}`;
 
-export default function Home() {
-  const [tab, setTab] = useState<"explore" | "mine">("explore");
+export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | "mine" }) {
+  const [tab, setTab] = useState<"explore" | "mine">(initialTab);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [addons, setAddons] = useState<Addon[]>(samples);
@@ -116,6 +117,13 @@ export default function Home() {
       const response = await fetch(`/api/bethesda/catalog?${params}`);
       const body = await response.json();
       setAddons(body.data?.length ? body.data : samples);
+      if (query.trim()) {
+        track("search", {
+          search_term: query.trim(),
+          search_category: category,
+          results_count: body.data?.length || 0,
+        });
+      }
     } catch {
       setAddons(samples);
       setNotice("Showing a preview while the Bethesda catalog reconnects.");
@@ -131,11 +139,14 @@ export default function Home() {
 
   const loadMine = useCallback(async () => {
     const response = await fetch("/api/bethesda/me");
-    if (!response.ok) return;
+    if (!response.ok) {
+      if (initialTab === "mine") setLoginOpen(true);
+      return;
+    }
     const body = await response.json();
     setAccount(body.username || "Bethesda author");
     setMine(body.data || []);
-  }, []);
+  }, [initialTab]);
 
   useEffect(() => {
     // Initial data loading intentionally synchronizes the UI with the session API.
@@ -166,6 +177,7 @@ export default function Home() {
     setAccount(body.username);
     setLoginOpen(false);
     setNotice("Connected securely to Bethesda.net.");
+    track("login", { method: "Bethesda.net" });
     loadMine();
   }
 
@@ -215,6 +227,10 @@ export default function Home() {
     setEditorOpen(false);
     setSelected(null);
     setNotice(editing ? "Draft updated." : "New unpublished draft created.");
+    track(editing ? "addon_updated" : "addon_created", {
+      addon_id: addonId,
+      has_archive: archive instanceof File && archive.size > 0,
+    });
     loadMine();
   }
 
@@ -228,8 +244,8 @@ export default function Home() {
           <span><strong>Wayrest</strong><small>Workshop</small></span>
         </a>
         <nav aria-label="Primary">
-          <button className={tab === "explore" ? "active" : ""} onClick={() => setTab("explore")}>Explore</button>
-          <button className={tab === "mine" ? "active" : ""} onClick={() => account ? setTab("mine") : setLoginOpen(true)}>My addons</button>
+          <Link className={tab === "explore" ? "active" : ""} href="/">Explore</Link>
+          <Link className={tab === "mine" ? "active" : ""} href="/my-addons">My addons</Link>
           <a href="https://docs.eso-addon-uploader.bryantjames.com"><IonIcon icon={codeSlashOutline} /> For Devs</a>
         </nav>
         {account ? (
@@ -290,7 +306,15 @@ export default function Home() {
           <div className="addon-grid">
             {visible.map((addon, index) => (
               <article className="addon-card" key={addon.content_id}>
-                <Link className="card-main" href={`/addons/${encodeURIComponent(addon.content_id)}`}>
+                <Link
+                  className="card-main"
+                  href={`/addons/${encodeURIComponent(addon.content_id)}`}
+                  onClick={() => track("select_content", {
+                    content_type: "addon",
+                    item_id: addon.content_id,
+                    item_name: addon.title,
+                  })}
+                >
                   <div className={`sigil sigil-${index % 4}`}>{addon.title.slice(0, 1)}</div>
                   <div className="card-copy">
                     <div className="card-meta">
@@ -307,10 +331,20 @@ export default function Home() {
                   <span>{addon.hardware_platforms?.length || 0} platforms</span>
                   {tab === "mine" && <button onClick={() => { setSelected(addon); setEditorOpen(true); }}><IonIcon icon={createOutline} /> Edit</button>}
                   <div className="card-actions">
-                    <a href={mirrorUrl(addon.content_id)} target="_blank" rel="noreferrer">
+                    <a
+                      href={mirrorUrl(addon.content_id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => track("addon_mirror_click", { addon_id: addon.content_id, addon_title: addon.title })}
+                    >
                       <IonIcon icon={codeSlashOutline} /> View mirror
                     </a>
-                    <a className="card-download" href={downloadUrl(addon.content_id)} download>
+                    <a
+                      className="card-download"
+                      href={downloadUrl(addon.content_id)}
+                      download
+                      onClick={() => track("file_download", { addon_id: addon.content_id, addon_title: addon.title, file_extension: "zip" })}
+                    >
                       <IonIcon icon={arrowDownOutline} /> Download ZIP
                     </a>
                   </div>
@@ -374,4 +408,8 @@ export default function Home() {
       </IonModal>
     </main>
   );
+}
+
+export default function Home() {
+  return <AddonApp />;
 }

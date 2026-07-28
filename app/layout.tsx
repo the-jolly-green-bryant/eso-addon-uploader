@@ -5,6 +5,7 @@ import "@ionic/react/css/normalize.css";
 import "@ionic/react/css/structure.css";
 import "@ionic/react/css/typography.css";
 import "./globals.css";
+import Analytics from "./analytics";
 
 export async function generateMetadata(): Promise<Metadata> {
   const incoming = await headers();
@@ -24,7 +25,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

@@ -19,6 +19,7 @@ export default $config({
       },
       environment: {
         BETHESDA_APP_KEY: process.env.BETHESDA_APP_KEY ?? "",
+        NEXT_PUBLIC_GOOGLE_ANALYTICS_ID: "G-JM05Q1W7SP",
       },
     });
 

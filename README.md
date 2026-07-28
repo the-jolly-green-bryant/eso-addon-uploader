@@ -153,6 +153,15 @@ The adapter lives under [`app/api/bethesda`](app/api/bethesda). Contributions
 that improve validation, fixtures, error handling, or endpoint documentation
 are especially welcome.
 
+## Analytics and privacy
+
+Production uses Google Analytics 4 to measure page views and a small set of
+product events: catalog searches, addon detail clicks, mirror visits, ZIP
+downloads, successful Bethesda logins, and addon draft creation or updates.
+Bethesda usernames, passwords, session tokens, and archive contents are never
+sent as analytics parameters. Search terms are measured because they directly
+inform catalog usability; do not enter personal information into search.
+
 ## Contributing
 
 Open an issue before undertaking a large protocol or UI change. Keep captured

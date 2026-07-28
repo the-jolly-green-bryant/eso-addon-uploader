@@ -5,6 +5,7 @@ import { cache } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { API, bethesdaHeaders, jsonFromBethesda, platformResponse } from "../../api/bethesda/_client";
+import TrackedActions from "./tracked-actions";
 
 type Addon = {
   content_id: string;
@@ -47,6 +48,15 @@ export async function generateMetadata(
   return {
     title: `${addon.title} — Wayrest Workshop`,
     description: addon.overview || `View and download ${addon.title}.`,
+    alternates: {
+      canonical: `https://eso-addon-uploader.bryantjames.com/addons/${addon.content_id}`,
+    },
+    openGraph: {
+      type: "article",
+      url: `https://eso-addon-uploader.bryantjames.com/addons/${addon.content_id}`,
+      title: `${addon.title} — Wayrest Workshop`,
+      description: addon.overview || `View and download ${addon.title}.`,
+    },
   };
 }
 
@@ -97,14 +107,12 @@ export default async function AddonPage({ params }: { params: Promise<{ id: stri
             <div><strong>{latest?.version_name || "Latest"}</strong><span>version</span></div>
           </div>
 
-          <div className="detail-actions">
-            <a className="mirror-link" href={mirrorUrl(addon.content_id)} target="_blank" rel="noreferrer">
-              &lt;/&gt; View source mirror
-            </a>
-            <a className="download" href={`/api/bethesda/download?id=${encodeURIComponent(addon.content_id)}`} download>
-              ↓ Download latest ZIP
-            </a>
-          </div>
+          <TrackedActions
+            contentId={addon.content_id}
+            title={addon.title}
+            mirrorUrl={mirrorUrl(addon.content_id)}
+            downloadUrl={`/api/bethesda/download?id=${encodeURIComponent(addon.content_id)}`}
+          />
         </div>
       </article>
     </main>
