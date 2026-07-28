@@ -23,6 +23,7 @@ import {
   codeSlashOutline,
   logInOutline,
   logOutOutline,
+  logoGithub,
   personCircleOutline,
   searchOutline,
   shieldCheckmarkOutline,
@@ -248,17 +249,29 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
           <Link className={tab === "mine" ? "active" : ""} href="/my-addons">My addons</Link>
           <a href="https://docs.eso-addon-uploader.bryantjames.com"><IonIcon icon={codeSlashOutline} /> For Devs</a>
         </nav>
-        {account ? (
-          <div className="account">
-            <IonIcon icon={personCircleOutline} />
-            <span>{account}</span>
-            <button aria-label="Log out" onClick={logout}><IonIcon icon={logOutOutline} /></button>
-          </div>
-        ) : (
-          <IonButton className="login-button" onClick={() => setLoginOpen(true)}>
-            <IonIcon slot="start" icon={logInOutline} /> Author login
-          </IonButton>
-        )}
+        <div className="header-actions">
+          <a
+            className="source-link"
+            href="https://github.com/the-jolly-green-bryant/eso-addon-uploader"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="View the open-source Wayrest Workshop code on GitHub"
+          >
+            <IonIcon icon={logoGithub} />
+            <span>Open source</span>
+          </a>
+          {account ? (
+            <div className="account">
+              <IonIcon icon={personCircleOutline} />
+              <span>{account}</span>
+              <button aria-label="Log out" onClick={logout}><IonIcon icon={logOutOutline} /></button>
+            </div>
+          ) : (
+            <IonButton className="login-button" onClick={() => setLoginOpen(true)}>
+              <IonIcon slot="start" icon={logInOutline} /> Bethesda login
+            </IonButton>
+          )}
+        </div>
       </header>
 
       <section className="hero">
@@ -366,12 +379,15 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
         <form className="modal-card" onSubmit={login}>
           <button type="button" className="modal-close" onClick={() => setLoginOpen(false)}><IonIcon icon={closeOutline} /></button>
           <div className="modal-icon"><IonIcon icon={shieldCheckmarkOutline} /></div>
-          <p className="eyebrow">SECURE AUTHOR ACCESS</p>
-          <h2>Connect Bethesda.net</h2>
-          <p>Your password goes directly to our server-side Bethesda session exchange and is never stored.</p>
-          <IonInput name="username" label="Bethesda username" labelPlacement="stacked" fill="outline" required />
-          <IonInput name="password" type="password" label="Password" labelPlacement="stacked" fill="outline" required />
-          <IonButton type="submit" expand="block" disabled={loading}>{loading ? <IonSpinner /> : "Connect account"}</IonButton>
+          <p className="eyebrow">YOUR BETHESDA DEVELOPER ACCOUNT</p>
+          <h2>Sign in with Bethesda.net</h2>
+          <p>Use your own Bethesda.net developer or addon-author account. This does not create a Wayrest account. Your credentials are exchanged with Bethesda from the server, your password is never stored, and the implementation is publicly auditable on GitHub.</p>
+          <a className="login-source-link" href="https://github.com/the-jolly-green-bryant/eso-addon-uploader" target="_blank" rel="noreferrer">
+            <IonIcon icon={logoGithub} /> Inspect the login source
+          </a>
+          <IonInput name="username" label="Bethesda.net developer username" labelPlacement="stacked" fill="outline" required />
+          <IonInput name="password" type="password" label="Bethesda.net password" labelPlacement="stacked" fill="outline" required />
+          <IonButton type="submit" expand="block" disabled={loading}>{loading ? <IonSpinner /> : "Connect my Bethesda account"}</IonButton>
         </form>
       </IonModal>
 

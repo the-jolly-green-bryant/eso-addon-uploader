@@ -55,6 +55,10 @@ button { color: inherit; }
 .topbar nav button.active { color: var(--ink); }
 .topbar nav button.active::after { content: ""; height: 3px; left: 0; right: 0; bottom: 0; position: absolute; background: var(--gold); border-radius: 3px 3px 0 0; }
 .login-button, .catalog-head ion-button { justify-self: end; --border-radius: 999px; --box-shadow: none; text-transform: none; font-weight: 700; }
+.header-actions { justify-self: end; display: flex; align-items: center; gap: 12px; }
+.source-link { display: inline-flex; align-items: center; gap: 6px; color: var(--pine); text-decoration: none; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.source-link ion-icon { font-size: 19px; }
+.source-link:hover { color: var(--gold); }
 .account { justify-self: end; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
 .account ion-icon { font-size: 25px; }
 .account button { border: 0; background: transparent; font-size: 20px; cursor: pointer; }
@@ -119,6 +123,8 @@ ion-modal { --background: transparent; }
 .modal-close { position: absolute; right: 18px; top: 18px; border: 0; background: rgba(255,255,255,.85); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; z-index: 2; }
 .modal-icon { width: 54px; height: 54px; border-radius: 14px; background: #e1eee7; color: var(--pine); display: grid; place-items: center; font-size: 25px; margin-bottom: 28px; }
 .modal-card > p:not(.eyebrow) { color: var(--ink-soft); line-height: 1.55; margin-bottom: 24px; }
+.login-source-link { display: inline-flex; align-items: center; gap: 7px; margin: -10px 0 24px; color: var(--pine); font-size: 13px; font-weight: 800; text-decoration: none; }
+.login-source-link:hover { text-decoration: underline; }
 .modal-card ion-input, .editor ion-input, .editor ion-textarea, .editor ion-select { margin-bottom: 14px; --border-color: var(--line); --border-radius: 8px; }
 .modal-card ion-button { margin-top: 18px; --border-radius: 8px; text-transform: none; font-weight: 800; }
 .editor { padding: 38px; display: flex; flex-direction: column; }
@@ -164,7 +170,7 @@ ion-modal { --background: transparent; }
   .addon-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }.editor-grid { grid-template-columns: 1fr; }.upload-zone { min-height: 220px; }
 }
 @media (max-width: 620px) {
-  .topbar { height: 68px; padding: 0 16px; }.brand small, .account span { display: none; }.login-button { font-size: 12px; }
+  .topbar { height: 68px; padding: 0 16px; }.brand small, .account span, .source-link span { display: none; }.login-button { font-size: 12px; }
   .hero { padding: 48px 22px; min-height: 300px; }.hero h1 { font-size: 43px; }.hero p { font-size: 15px; }
   .catalog { padding: 42px 16px 80px; }.catalog-head { align-items: start; }.catalog h2 { font-size: 28px; }
   .filters { grid-template-columns: 1fr; }.addon-grid { grid-template-columns: 1fr; }.card-main { min-height: auto; }
