@@ -1,98 +1,166 @@
-# vinext-starter
+# Wayrest Workshop
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+An open-source, cross-platform browser for Elder Scrolls Online addons, with
+Bethesda login, addon management, and an experimental publishing workflow.
 
-## Prerequisites
+**Live site:** [eso-addon-uploader.bryantjames.com](https://eso-addon-uploader.bryantjames.com)
 
-- Node.js `>=22.13.0`
+> This is an independent community project. It is not affiliated with,
+> endorsed by, or supported by Bethesda Softworks, ZeniMax Online Studios, or
+> The Elder Scrolls Online.
 
-## Quick Start
+## Why this exists
+
+Addon publishing should not require trusting an opaque Windows-only executable.
+Wayrest Workshop makes the client and its protocol adapter inspectable. Mac,
+Linux, Windows, and mobile users can browse and download addons in a web
+browser, while maintainers can audit exactly what happens to credentials,
+archives, and metadata.
+
+Open source does not magically create trust. It makes trust *verifiable*. This
+project therefore keeps the sensitive surface small, documents what has been
+observed versus inferred, and avoids claiming guarantees the upstream API does
+not provide.
+
+## Trust model
+
+- Your Bethesda password is submitted only to a same-origin server route over
+  HTTPS. The application does not save it.
+- The resulting session token is stored in an `HttpOnly`, `Secure`,
+  `SameSite=Lax` cookie, so browser JavaScript cannot read it.
+- The Bethesda application key stays server-side in AWS and GitHub Actions. It
+  is not compiled into the browser bundle.
+- Public browsing and downloads do not require login.
+- There is no advertising SDK, analytics SDK, or behavioral tracking in this
+  repository.
+- Source, infrastructure configuration, and deployment workflow are public.
+- Publishing remains an explicit user action. An upload is never initiated in
+  the background.
+
+You still trust the operator of the deployment you use, its cloud account,
+GitHub Actions, AWS, and Bethesda's API. For maximum control, review the code
+and deploy your own copy. Use a unique password and never paste credentials
+into an issue, log, or network capture.
+
+See [SECURITY.md](SECURITY.md) for reporting and credential-handling guidance.
+
+## Current capabilities
+
+| Capability | Status |
+| --- | --- |
+| Browse and search the public addon catalog | Working |
+| View addon details | Working |
+| Reconstruct and download addon ZIP archives | Working |
+| Bethesda authentication | Working |
+| View addons owned by the signed-in account | Working |
+| Create an addon draft | Working, based on observed API behavior |
+| Edit owned addon metadata | Working, based on observed API behavior |
+| Upload archive contents | Experimental; upstream handshake is inferred |
+
+The upload flow is deliberately labeled experimental. Bethesda offered API
+access but did not publish a schema, so the adapter is based on observed
+requests and conservative inference. Upstream changes may break it. Please
+avoid using irreplaceable archives without retaining a local copy.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  B["Ionic React UI"] --> N["Next.js same-origin API routes"]
+  N --> A["Bethesda addon API"]
+  N --> C["HttpOnly session cookie"]
+  G["GitHub Actions (OIDC)"] --> S["SST / OpenNext"]
+  S --> W["AWS Lambda + CloudFront + S3"]
+  W --> D["eso-addon-uploader.bryantjames.com"]
+```
+
+The browser never calls Bethesda directly. Next.js route handlers normalize
+the upstream responses, keep the application key private, and isolate protocol
+changes from the UI. The deployment uses SST's OpenNext adapter on AWS.
+
+## Local development
+
+Requirements:
+
+- Node.js 22+
+- npm
+- A Bethesda-provided application key for authenticated operations
 
 ```bash
-npm install
+git clone https://github.com/the-jolly-green-bryant/eso-addon-uploader.git
+cd eso-addon-uploader
+cp .env.example .env.local
+# Add BETHESDA_APP_KEY to .env.local
+npm ci
 npm run dev
-npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+Open <http://localhost:3000>. Environment files are gitignored. Never commit an
+application key, password, session cookie, presigned URL, or traffic capture
+containing authorization headers.
 
-## Included Shape
+Run the full local gate with:
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+npm test
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+## AWS deployment
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+Production is described in [`sst.config.ts`](sst.config.ts) and deployed by
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Every pull
+request runs lint and a production build. A successful push to `main` deploys
+the production stage.
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+Prerequisites:
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+1. An AWS account for the application runtime and a Cloudflare-managed
+   `bryantjames.com` DNS zone.
+2. A GitHub OIDC IAM role trusted only by this repository and main branch.
+3. A GitHub `production` environment with:
+   - `AWS_ROLE_ARN` — the deploy role ARN.
+   - `BETHESDA_APP_KEY` — the server-only Bethesda application key.
+   - `CLOUDFLARE_API_TOKEN` — a narrowly scoped token with Zone DNS Edit.
+   - `CLOUDFLARE_DEFAULT_ACCOUNT_ID` — the Cloudflare account ID.
+4. Optional GitHub environment protection rules for production approval.
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+No long-lived AWS access key is stored in GitHub. Actions exchanges its signed
+OIDC identity for short-lived AWS credentials. SST provisions the application,
+CloudFront distribution, and TLS certificate on AWS, then maintains the
+`eso-addon-uploader.bryantjames.com` DNS record through Cloudflare.
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+To deploy from an authenticated workstation:
 
-## Useful Commands
+```bash
+BETHESDA_APP_KEY=... npm run deploy
+```
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+## Protocol research
 
-## Learn More
+Treat captured traffic as sensitive source material:
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- Capture only traffic from an account and machine you control.
+- Redact authorization headers, cookies, passwords, app keys, presigned URLs,
+  device identifiers, and unpublished addon content.
+- Commit distilled schemas, fixtures with synthetic values, and explanations;
+  never commit raw captures.
+- Mark endpoints as **confirmed**, **observed**, or **inferred**.
+- Keep upstream calls minimal and do not bypass authorization or rate limits.
+
+The adapter lives under [`app/api/bethesda`](app/api/bethesda). Contributions
+that improve validation, fixtures, error handling, or endpoint documentation
+are especially welcome.
+
+## Contributing
+
+Open an issue before undertaking a large protocol or UI change. Keep captured
+data out of pull requests, include a test or reproducible validation where
+possible, and explain whether endpoint behavior was observed or inferred.
+
+This project follows the principle that users should be able to understand
+what is sent, where it is sent, and why. Changes that obscure those answers
+will not be accepted.
+
+## License
+
+[MIT](LICENSE)

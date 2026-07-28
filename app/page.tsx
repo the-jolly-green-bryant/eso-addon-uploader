@@ -130,6 +130,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Initial data loading intentionally synchronizes the UI with the session API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMine();
   }, [loadMine]);
 
