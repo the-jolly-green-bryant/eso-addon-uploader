@@ -33,8 +33,9 @@ not provide.
 - The Bethesda application key stays server-side in AWS and GitHub Actions. It
   is not compiled into the browser bundle.
 - Public browsing and downloads do not require login.
-- There is no advertising SDK, analytics SDK, or behavioral tracking in this
-  repository.
+- There is no advertising SDK. The production deployment uses the narrowly
+  scoped Google Analytics events described below; credentials and archive
+  contents are excluded.
 - Source, infrastructure configuration, and deployment workflow are public.
 - Publishing remains an explicit user action. An upload is never initiated in
   the background.
@@ -80,6 +81,11 @@ The browser never calls Bethesda directly. Next.js route handlers normalize
 the upstream responses, keep the application key private, and isolate protocol
 changes from the UI. The deployment uses SST's OpenNext adapter on AWS.
 
+Server routes validate identifiers and bounded input, enforce same-origin
+checks on authenticated mutations, apply upstream timeouts, and reject
+untrusted download URLs and unsafe archive paths. Reconstructed ZIP downloads
+also enforce per-file, manifest, file-count, and total-size limits.
+
 ## Local development
 
 Requirements:
@@ -111,8 +117,8 @@ npm test
 
 Production is described in [`sst.config.ts`](sst.config.ts) and deployed by
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Every pull
-request runs lint and a production build. A successful push to `main` deploys
-the production stage.
+request runs unit tests, lint, strict type checking, and a production build. A
+successful push to `main` deploys the production stage.
 
 Prerequisites:
 

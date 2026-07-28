@@ -1,13 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findJwt, hasAppKey, jsonFromBethesda, SESSION_COOKIE } from "../_client";
+import {
+  findJwt,
+  hasAppKey,
+  hasTrustedOrigin,
+  jsonError,
+  jsonFromBethesda,
+  readJsonObject,
+  requiredString,
+  SESSION_COOKIE,
+  upstreamMessage,
+  withTimeout,
+} from "../_client";
 
 export async function POST(request: NextRequest) {
+  if (!hasTrustedOrigin(request)) return jsonError("Cross-site login requests are not allowed.", 403);
   if (!hasAppKey()) {
-    return NextResponse.json({ error: "Bethesda application key is not configured yet." }, { status: 503 });
+    return jsonError("Bethesda application key is not configured yet.", 503);
   }
-  const { username, password } = await request.json();
-  if (!username || !password) return NextResponse.json({ error: "Username and password are required." }, { status: 400 });
+  const input = await readJsonObject(request, 8_192);
+  if (!input) return jsonError("A valid JSON request body is required.", 400);
+  const username = requiredString(input, "username", { maxLength: 100 });
+  const password = requiredString(input, "password", { maxLength: 1_024 });
+  if (!username || !password) return jsonError("Username and password are required.", 400);
   const response = await fetch("https://api.bethesda.net/session/login", {
+    ...withTimeout(),
     method: "POST",
     headers: {
       accept: "application/json",
@@ -20,9 +36,9 @@ export async function POST(request: NextRequest) {
   const body = await jsonFromBethesda(response);
   const token = findJwt(body);
   if (!response.ok || !token) {
-    return NextResponse.json({ error: body?.platform?.message || "Bethesda rejected the login." }, { status: response.status || 401 });
+    return jsonError(upstreamMessage(body, "Bethesda rejected the login."), response.status || 401);
   }
-  const result = NextResponse.json({ username });
+  const result = NextResponse.json({ username }, { headers: { "cache-control": "no-store" } });
   result.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

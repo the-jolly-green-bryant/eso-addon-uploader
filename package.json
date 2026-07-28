@@ -9,7 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "npm run lint && npm run build",
+    "test": "npm run lint && npm run test:unit && npm run typecheck && npm run build",
+    "test:unit": "node --test --experimental-strip-types tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint . --ignore-pattern .next",
     "deploy": "sst deploy --stage production"
   },

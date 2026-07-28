@@ -32,6 +32,7 @@ import {
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { track } from "../lib/analytics";
+import { decodeHtmlEntities } from "../lib/text";
 
 setupIonicReact();
 
@@ -240,10 +241,10 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#">
+        <Link className="brand" href="/" aria-label="Wayrest Workshop home">
           <span className="brand-mark">W</span>
           <span><strong>Wayrest</strong><small>Workshop</small></span>
-        </a>
+        </Link>
         <nav aria-label="Primary">
           <Link className={tab === "explore" ? "active" : ""} href="/">Explore</Link>
           <Link className={tab === "mine" ? "active" : ""} href="/my-addons">My addons</Link>
@@ -285,7 +286,7 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
         <div className="hero-stat"><strong>{formatCount(410765)}</strong><span>community downloads</span></div>
       </section>
 
-      {notice && <div className="notice" role="status">{notice}<button onClick={() => setNotice("")}><IonIcon icon={closeOutline} /></button></div>}
+      {notice && <div className="notice" role="status">{notice}<button aria-label="Dismiss notice" onClick={() => setNotice("")}><IonIcon icon={closeOutline} /></button></div>}
 
       <section className="catalog">
         <div className="catalog-head">
@@ -325,18 +326,18 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
                   onClick={() => track("select_content", {
                     content_type: "addon",
                     item_id: addon.content_id,
-                    item_name: addon.title,
+                    item_name: decodeHtmlEntities(addon.title),
                   })}
                 >
-                  <div className={`sigil sigil-${index % 4}`}>{addon.title.slice(0, 1)}</div>
+                  <div className={`sigil sigil-${index % 4}`}>{decodeHtmlEntities(addon.title).slice(0, 1)}</div>
                   <div className="card-copy">
                     <div className="card-meta">
-                      <span>{addon.categories?.[0] || "Community"}</span>
+                      <span>{decodeHtmlEntities(addon.categories?.[0] || "Community")}</span>
                       {!addon.published && <span className="draft">Draft</span>}
                     </div>
-                    <h3>{addon.title}</h3>
-                    <p>{addon.overview || "A new creation waiting in the workshop."}</p>
-                    <div className="author">by {addon.author_displayname || account || "Unknown artisan"}</div>
+                    <h3>{decodeHtmlEntities(addon.title)}</h3>
+                    <p>{decodeHtmlEntities(addon.overview || "A new creation waiting in the workshop.")}</p>
+                    <div className="author">by {decodeHtmlEntities(addon.author_displayname || account || "Unknown artisan")}</div>
                   </div>
                 </Link>
                 <footer>
@@ -348,7 +349,7 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
                       href={mirrorUrl(addon.content_id)}
                       target="_blank"
                       rel="noreferrer"
-                      onClick={() => track("addon_mirror_click", { addon_id: addon.content_id, addon_title: addon.title })}
+                      onClick={() => track("addon_mirror_click", { addon_id: addon.content_id, addon_title: decodeHtmlEntities(addon.title) })}
                     >
                       <IonIcon icon={codeSlashOutline} /> View mirror
                     </a>
@@ -356,7 +357,7 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
                       className="card-download"
                       href={downloadUrl(addon.content_id)}
                       download
-                      onClick={() => track("file_download", { addon_id: addon.content_id, addon_title: addon.title, file_extension: "zip" })}
+                      onClick={() => track("file_download", { addon_id: addon.content_id, addon_title: decodeHtmlEntities(addon.title), file_extension: "zip" })}
                     >
                       <IonIcon icon={arrowDownOutline} /> Download ZIP
                     </a>
@@ -395,7 +396,7 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
         <form className="editor" onSubmit={saveAddon}>
           <div className="editor-head">
             <div><p className="eyebrow">AUTHOR WORKSHOP</p><h2>{selected ? "Edit addon" : "Create a draft"}</h2></div>
-            <button type="button" onClick={() => setEditorOpen(false)}><IonIcon icon={closeOutline} /></button>
+            <button type="button" aria-label="Close addon editor" onClick={() => setEditorOpen(false)}><IonIcon icon={closeOutline} /></button>
           </div>
           <div className="editor-grid">
             <section>

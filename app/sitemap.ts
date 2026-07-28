@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { API, bethesdaHeaders, jsonFromBethesda, platformResponse } from "./api/bethesda/_client";
+import { API, bethesdaHeaders, isUuid, jsonFromBethesda, platformResponse, withTimeout } from "./api/bethesda/_client";
 
 export const revalidate = 3600;
 
@@ -21,6 +21,7 @@ async function catalogPage(page: number): Promise<CatalogPage> {
     deleted: "false",
   });
   const response = await fetch(`${API}/content?${params}`, {
+    ...withTimeout(),
     headers: bethesdaHeaders(),
     next: { revalidate },
   });
@@ -44,9 +45,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
-    ...addons.flatMap((addon) => addon.content_id ? [{
+    ...addons.flatMap((addon) => addon.content_id && isUuid(addon.content_id) ? [{
       url: `${origin}/addons/${addon.content_id}`,
-      lastModified: new Date((addon.utime || addon.ptime || 0) * 1000),
+      ...(addon.utime || addon.ptime ? { lastModified: new Date((addon.utime || addon.ptime || 0) * 1000) } : {}),
       changeFrequency: "weekly" as const,
       priority: 0.8,
     }] : []),

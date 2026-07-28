@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { API, bethesdaHeaders, jsonFromBethesda, platformResponse } from "../../api/bethesda/_client";
+import { API, bethesdaHeaders, isUuid, jsonFromBethesda, platformResponse, withTimeout } from "../../api/bethesda/_client";
+import { decodeHtmlEntities } from "../../../lib/text";
 import TrackedActions from "./tracked-actions";
 
 type Addon = {
@@ -26,7 +27,9 @@ type Addon = {
 };
 
 const getAddon = cache(async (id: string): Promise<Addon | null> => {
+  if (!isUuid(id)) return null;
   const response = await fetch(`${API}/content/${encodeURIComponent(id)}`, {
+    ...withTimeout(),
     headers: bethesdaHeaders(),
     cache: "no-store",
   });
@@ -46,16 +49,16 @@ export async function generateMetadata(
   const addon = await getAddon((await params).id);
   if (!addon) return { title: "Addon not found — Wayrest Workshop" };
   return {
-    title: `${addon.title} — Wayrest Workshop`,
-    description: addon.overview || `View and download ${addon.title}.`,
+    title: `${decodeHtmlEntities(addon.title)} — Wayrest Workshop`,
+    description: decodeHtmlEntities(addon.overview || `View and download ${addon.title}.`),
     alternates: {
       canonical: `https://eso-addon-uploader.bryantjames.com/addons/${addon.content_id}`,
     },
     openGraph: {
       type: "article",
       url: `https://eso-addon-uploader.bryantjames.com/addons/${addon.content_id}`,
-      title: `${addon.title} — Wayrest Workshop`,
-      description: addon.overview || `View and download ${addon.title}.`,
+      title: `${decodeHtmlEntities(addon.title)} — Wayrest Workshop`,
+      description: decodeHtmlEntities(addon.overview || `View and download ${addon.title}.`),
     },
   };
 }
@@ -80,12 +83,12 @@ export default async function AddonPage({ params }: { params: Promise<{ id: stri
 
       <article className="standalone-detail">
         <div className="detail-banner">
-          <div className="detail-sigil">{addon.title.slice(0, 1)}</div>
+          <div className="detail-sigil">{decodeHtmlEntities(addon.title).slice(0, 1)}</div>
         </div>
         <div className="detail-body">
-          <p className="eyebrow">{addon.categories?.[0] || "COMMUNITY ADDON"}</p>
-          <h1>{addon.title}</h1>
-          <p className="byline">Crafted by <strong>{addon.author_displayname || "Unknown artisan"}</strong></p>
+          <p className="eyebrow">{decodeHtmlEntities(addon.categories?.[0] || "COMMUNITY ADDON")}</p>
+          <h1>{decodeHtmlEntities(addon.title)}</h1>
+          <p className="byline">Crafted by <strong>{decodeHtmlEntities(addon.author_displayname || "Unknown artisan")}</strong></p>
 
           <div className="platforms">
             {addon.hardware_platforms?.map((platform) => (
@@ -109,7 +112,7 @@ export default async function AddonPage({ params }: { params: Promise<{ id: stri
 
           <TrackedActions
             contentId={addon.content_id}
-            title={addon.title}
+            title={decodeHtmlEntities(addon.title)}
             mirrorUrl={mirrorUrl(addon.content_id)}
             downloadUrl={`/api/bethesda/download?id=${encodeURIComponent(addon.content_id)}`}
           />
