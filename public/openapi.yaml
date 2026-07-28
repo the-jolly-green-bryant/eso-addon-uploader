@@ -1,247 +1,205 @@
 openapi: 3.1.0
 info:
-  title: Wayrest Workshop API
-  version: 0.1.0
+  title: Bethesda ESO Addon API — Unofficial Protocol Reference
+  version: 0.2.0
   description: |
-    Unofficial same-origin adapter for browsing and managing Elder Scrolls
-    Online addons. This specification documents the open-source adapter, not
-    an official Bethesda API. Operations marked `x-protocol-status: inferred`
-    may change as upstream behavior is explored.
+    Community-maintained documentation of Bethesda's upstream ESO addon API,
+    reconstructed from observed ESOUploader traffic and live requests. This is
+    not an official Bethesda SDK or API specification. Bethesda owns and
+    operates the service. Obtain your own application key and expect
+    undocumented behavior to change.
   license:
-    name: MIT
+    name: Documentation licensed under MIT
     identifier: MIT
 externalDocs:
-  description: Developer guides and protocol notes
+  description: Guides, evidence labels, and safety notes
   url: https://docs.eso-addon-uploader.bryantjames.com
 servers:
-  - url: https://eso-addon-uploader.bryantjames.com
-    description: Production
-  - url: http://localhost:3000
-    description: Local development
+  - url: https://api.bethesda.net
+    description: Bethesda production API
 tags:
   - name: Catalog
   - name: Session
   - name: Author
-  - name: Packages
+  - name: Upload
 paths:
-  /api/bethesda/catalog:
+  /ugcmods/v2/content:
     get:
       tags: [Catalog]
-      summary: Search the public addon catalog
-      operationId: searchAddons
+      summary: Search the public ESO addon catalog
+      operationId: searchEsoAddons
       x-protocol-status: confirmed
+      security: [{applicationKey: []}]
       parameters:
+        - {name: product, in: query, required: true, schema: {type: string, const: ESO}}
         - {$ref: "#/components/parameters/Text"}
         - {$ref: "#/components/parameters/Page"}
         - {$ref: "#/components/parameters/Size"}
-        - name: categories
-          in: query
-          schema: {type: string}
-        - name: author_displayname
-          in: query
-          schema: {type: string}
-        - name: hardware_platforms
-          in: query
-          schema: {type: string, default: "WINDOWS,PLAYSTATION5,XBOXSERIESX"}
-        - name: sort
-          in: query
-          schema: {type: string, default: utime}
-        - name: order
-          in: query
-          schema: {type: string, enum: [asc, desc], default: desc}
+        - {name: categories, in: query, schema: {type: string}}
+        - {name: author_displayname, in: query, schema: {type: string}}
+        - {name: hardware_platforms, in: query, schema: {type: string, example: "WINDOWS,PLAYSTATION5,XBOXSERIESX"}}
+        - {name: sort, in: query, schema: {type: string, default: utime}}
+        - {name: order, in: query, schema: {type: string, enum: [asc, desc], default: desc}}
+        - {name: deleted, in: query, schema: {type: boolean, default: false}}
       responses:
         "200":
-          description: Catalog page, or preview mode when the server application key is absent.
+          description: Bethesda platform envelope containing a catalog page.
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items: {$ref: "#/components/schemas/Addon"}
-                  preview: {type: boolean}
-  /api/bethesda/download:
-    get:
-      tags: [Packages]
-      summary: Reconstruct the latest Windows release as a ZIP
-      operationId: downloadAddon
-      x-protocol-status: confirmed
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema: {type: string, format: uuid}
-      responses:
-        "200":
-          description: Reconstructed addon archive.
-          headers:
-            Content-Disposition:
-              schema: {type: string}
-          content:
-            application/zip:
-              schema: {type: string, contentEncoding: binary}
-        "400": {$ref: "#/components/responses/BadRequest"}
-        "404": {$ref: "#/components/responses/NotFound"}
-  /api/bethesda/login:
-    post:
-      tags: [Session]
-      summary: Start a Bethesda author session
-      operationId: login
-      x-protocol-status: observed
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [username, password]
-              properties:
-                username: {type: string}
-                password: {type: string, format: password, writeOnly: true}
-      responses:
-        "200":
-          description: Authenticated. Sets an HttpOnly session cookie.
-          headers:
-            Set-Cookie:
-              schema: {type: string}
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [username]
-                properties:
-                  username: {type: string}
-        "400": {$ref: "#/components/responses/BadRequest"}
-        "503":
-          description: Server application key is not configured.
-          content:
-            application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-  /api/bethesda/logout:
-    post:
-      tags: [Session]
-      summary: End the current author session
-      operationId: logout
-      x-protocol-status: observed
-      security: [{sessionCookie: []}]
-      responses:
-        "200":
-          description: Local cookie cleared; upstream logout attempted.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok: {type: boolean, const: true}
-  /api/bethesda/me:
-    get:
-      tags: [Author]
-      summary: List addons owned by the current author
-      operationId: listMyAddons
-      x-protocol-status: confirmed
-      security: [{sessionCookie: []}]
-      responses:
-        "200":
-          description: Author identity and owned addon records.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  username: {type: string}
-                  data:
-                    type: array
-                    items: {$ref: "#/components/schemas/Addon"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-  /api/bethesda/addons:
+              schema: {$ref: "#/components/schemas/CatalogEnvelope"}
     post:
       tags: [Author]
       summary: Create an unpublished addon draft
-      operationId: createAddon
+      operationId: createEsoAddon
       x-protocol-status: confirmed
-      security: [{sessionCookie: []}]
+      security: [{applicationKey: [], sessionToken: []}]
       requestBody:
         required: true
         content:
           application/json:
             schema: {$ref: "#/components/schemas/AddonInput"}
       responses:
-        "201":
-          description: Draft created.
+        "200":
+          description: Bethesda platform envelope containing the created addon.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Addon"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-  /api/bethesda/addons/{id}:
+              schema: {$ref: "#/components/schemas/AddonEnvelope"}
+  /ugcmods/v2/content/{content_id}:
+    parameters:
+      - {$ref: "#/components/parameters/ContentId"}
+    get:
+      tags: [Catalog]
+      summary: Read one addon and its release metadata
+      operationId: getEsoAddon
+      x-protocol-status: confirmed
+      security: [{applicationKey: []}]
+      responses:
+        "200":
+          description: Bethesda platform envelope containing the addon.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AddonEnvelope"}
+        "404": {$ref: "#/components/responses/UpstreamError"}
     put:
       tags: [Author]
-      summary: Update owned addon metadata
-      operationId: updateAddon
+      summary: Update metadata for an owned addon
+      operationId: updateEsoAddon
       x-protocol-status: observed
-      security: [{sessionCookie: []}]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string, format: uuid}
+      security: [{applicationKey: [], sessionToken: []}]
       requestBody:
         required: true
         content:
           application/json:
-            schema: {$ref: "#/components/schemas/AddonInput"}
+            schema: {$ref: "#/components/schemas/AddonUpdate"}
       responses:
         "200":
-          description: Updated addon.
+          description: Bethesda platform envelope containing the updated addon.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Addon"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-  /api/bethesda/upload:
+              schema: {$ref: "#/components/schemas/AddonEnvelope"}
+  /ugcmods/v2/content/me:
+    get:
+      tags: [Author]
+      summary: List addons owned by the authenticated author
+      operationId: listOwnedEsoAddons
+      x-protocol-status: confirmed
+      security: [{applicationKey: [], sessionToken: []}]
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Size"}
+        - {name: sort, in: query, schema: {type: string, default: utime}}
+        - {name: order, in: query, schema: {type: string, enum: [asc, desc], default: desc}}
+        - {name: deleted, in: query, schema: {type: boolean, default: false}}
+      responses:
+        "200":
+          description: Bethesda platform envelope containing the author's catalog page.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CatalogEnvelope"}
+  /session/login:
     post:
-      tags: [Packages]
-      summary: Upload an addon release archive
-      operationId: uploadAddon
-      description: Experimental initiate, binary PUT, and complete sequence.
-      x-protocol-status: inferred
-      security: [{sessionCookie: []}]
+      tags: [Session]
+      summary: Exchange Bethesda credentials for a session token
+      operationId: createBethesdaSession
+      x-protocol-status: observed
+      security: [{applicationKey: []}]
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
               type: object
-              required: [archive, addonId]
+              required: [username, password, language]
               properties:
-                archive: {type: string, contentMediaType: application/zip, contentEncoding: binary}
-                addonId: {type: string, format: uuid}
-                version: {type: string, default: 1.0.0}
-                note: {type: string}
+                username: {type: string}
+                password: {type: string, format: password, writeOnly: true}
+                language: {type: string, default: en}
       responses:
         "200":
-          description: Upstream completion response.
+          description: Bethesda response containing a JWT-like session token.
           content:
             application/json:
               schema: {type: object, additionalProperties: true}
-        "400": {$ref: "#/components/responses/BadRequest"}
-        "401": {$ref: "#/components/responses/Unauthorized"}
-        "413":
-          description: Archive exceeds 200 MB.
+        "401": {$ref: "#/components/responses/UpstreamError"}
+  /session/logout:
+    post:
+      tags: [Session]
+      summary: Invalidate a Bethesda session token
+      operationId: endBethesdaSession
+      x-protocol-status: observed
+      security: [{applicationKey: [], sessionToken: []}]
+      responses:
+        "200":
+          description: Session invalidated.
+  /ugcmods/v2/upload/initiate:
+    post:
+      tags: [Upload]
+      summary: Initiate a release archive upload
+      operationId: initiateEsoAddonUpload
+      description: Experimental. The returned response is expected to contain an upload ID and a presigned storage URL.
+      x-protocol-status: inferred
+      security: [{applicationKey: [], sessionToken: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UploadInitiate"}
+      responses:
+        "200":
+          description: Upload identifier and presigned binary storage URL; exact nesting may change.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Error"}
-        "502":
-          description: Upload handshake, transfer, or completion failed.
+              schema: {type: object, additionalProperties: true}
+  /ugcmods/v2/upload/complete:
+    post:
+      tags: [Upload]
+      summary: Complete a release archive upload
+      operationId: completeEsoAddonUpload
+      x-protocol-status: inferred
+      security: [{applicationKey: [], sessionToken: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UploadComplete"}
+      responses:
+        "200":
+          description: Bethesda completion response; exact shape is not yet stable.
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/UploadError"}
+              schema: {type: object, additionalProperties: true}
 components:
   securitySchemes:
-    sessionCookie:
+    applicationKey:
       type: apiKey
-      in: cookie
-      name: wayrest_bnet_session
-      description: HttpOnly cookie set by the login endpoint.
+      in: header
+      name: x-bnet-key
+      description: Bethesda-issued application key. Never expose it in browser code or a public repository.
+    sessionToken:
+      type: apiKey
+      in: header
+      name: x-session-token
+      description: Session token returned by /session/login.
   parameters:
     Text:
       name: text
@@ -255,7 +213,42 @@ components:
       name: size
       in: query
       schema: {type: integer, minimum: 1, maximum: 100, default: 30}
+    ContentId:
+      name: content_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
   schemas:
+    PlatformEnvelope:
+      type: object
+      additionalProperties: true
+      properties:
+        platform:
+          type: object
+          additionalProperties: true
+          properties:
+            response: {}
+            message: {type: string}
+    CatalogEnvelope:
+      allOf:
+        - {$ref: "#/components/schemas/PlatformEnvelope"}
+        - type: object
+          example:
+            platform:
+              response:
+                page: 1
+                size: 30
+                total: 506
+                data: []
+    AddonEnvelope:
+      allOf:
+        - {$ref: "#/components/schemas/PlatformEnvelope"}
+        - type: object
+          example:
+            platform:
+              response:
+                content_id: 2a88cc14-8e8c-4b73-9605-2e1d7c764e23
+                title: TSC Price Fetcher 2
     Addon:
       type: object
       required: [content_id, title]
@@ -274,40 +267,85 @@ components:
           items: {type: string}
         published: {type: boolean}
         status: {type: string}
+        download:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              hardware_platform: {type: string}
+              published:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                  properties:
+                    version_name: {type: string}
+                    client:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        additionalProperties: true
+                        properties:
+                          download_url: {type: string, format: uri}
+                          size: {type: integer}
     AddonInput:
+      allOf:
+        - {$ref: "#/components/schemas/AddonUpdate"}
+        - type: object
+          required: [product, content_type, hardware_platforms, default_locale, supported_locales]
+          properties:
+            product: {type: string, const: ESO}
+            content_type: {type: string, const: STANDARD}
+            hardware_platforms:
+              type: array
+              items: {type: string, enum: [WINDOWS, PLAYSTATION5, XBOXSERIESX]}
+            default_locale: {type: string, default: EN}
+            supported_locales:
+              type: array
+              items: {type: string}
+    AddonUpdate:
       type: object
-      required: [title, overview, description]
+      required: [title, overview, description, categories]
       properties:
         title: {type: string}
         overview: {type: string, maxLength: 180}
         description: {type: string}
-        category: {type: string, default: User Interface}
-    Error:
+        categories:
+          type: array
+          items: {type: string}
+    UploadInitiate:
       type: object
-      required: [error]
+      required: [content_id, filename, file_size, content_type, hardware_platform, version_name, parts]
       properties:
-        error: {type: string}
-    UploadError:
-      allOf:
-        - {$ref: "#/components/schemas/Error"}
-        - type: object
-          properties:
-            phase:
-              type: string
-              enum: [initiate, initiate-schema, binary, complete]
+        content_id: {type: string, format: uuid}
+        filename: {type: string}
+        file_name: {type: string, description: Observed compatibility alias for filename.}
+        file_size: {type: integer}
+        size: {type: integer, description: Observed compatibility alias for file_size.}
+        content_type: {type: string, default: application/zip}
+        hardware_platform: {type: string, default: WINDOWS}
+        version_name: {type: string}
+        note: {type: string}
+        parts: {type: integer, default: 1}
+    UploadComplete:
+      type: object
+      required: [content_id, upload_id, number_of_parts, parts]
+      properties:
+        content_id: {type: string, format: uuid}
+        upload_id: {type: string}
+        number_of_parts: {type: integer, default: 1}
+        parts:
+          type: array
+          items:
+            type: object
+            required: [part_number, etag]
+            properties:
+              part_number: {type: integer}
+              etag: {type: string}
   responses:
-    BadRequest:
-      description: Invalid or missing input.
+    UpstreamError:
+      description: Bethesda error response. Useful details are commonly nested under platform.message or platform.response.message.
       content:
         application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    Unauthorized:
-      description: Author session is missing or expired.
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
-    NotFound:
-      description: Addon or release not found.
-      content:
-        application/json:
-          schema: {$ref: "#/components/schemas/Error"}
+          schema: {$ref: "#/components/schemas/PlatformEnvelope"}

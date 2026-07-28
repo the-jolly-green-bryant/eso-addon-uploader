@@ -1,12 +1,13 @@
 const endpoints = [
-  ["GET", "/api/bethesda/catalog", "Confirmed", "Search and paginate the public ESO addon catalog."],
-  ["GET", "/api/bethesda/download?id={content_id}", "Confirmed", "Reconstruct the latest Windows release as a ZIP."],
-  ["POST", "/api/bethesda/login", "Observed", "Exchange Bethesda credentials for a protected session cookie."],
-  ["POST", "/api/bethesda/logout", "Observed", "Invalidate the upstream session and clear the local cookie."],
-  ["GET", "/api/bethesda/me", "Confirmed", "List addons owned by the authenticated author."],
-  ["POST", "/api/bethesda/addons", "Confirmed", "Create an unpublished addon draft."],
-  ["PUT", "/api/bethesda/addons/{id}", "Observed", "Update metadata for an owned addon."],
-  ["POST", "/api/bethesda/upload", "Inferred", "Initiate, transfer, and complete a ZIP upload."],
+  ["GET", "/ugcmods/v2/content", "Confirmed", "Search and paginate the public ESO addon catalog."],
+  ["GET", "/ugcmods/v2/content/{content_id}", "Confirmed", "Read one addon, including published release manifests."],
+  ["POST", "/session/login", "Observed", "Exchange Bethesda credentials for an upstream session token."],
+  ["POST", "/session/logout", "Observed", "Invalidate an upstream session token."],
+  ["GET", "/ugcmods/v2/content/me", "Confirmed", "List addons owned by the authenticated author."],
+  ["POST", "/ugcmods/v2/content", "Confirmed", "Create an unpublished addon draft."],
+  ["PUT", "/ugcmods/v2/content/{content_id}", "Observed", "Update metadata for an owned addon."],
+  ["POST", "/ugcmods/v2/upload/initiate", "Inferred", "Start a release upload and obtain a storage URL."],
+  ["POST", "/ugcmods/v2/upload/complete", "Inferred", "Finalize an uploaded release."],
 ];
 
 function Code({ children }: { children: string }) {
@@ -17,104 +18,116 @@ export default function DeveloperDocs() {
   return (
     <div className="docs-shell">
       <aside className="docs-sidebar">
-        <a className="docs-brand" href="#top"><span>W</span><strong>Wayrest Docs</strong></a>
+        <a className="docs-brand" href="#top"><span>W</span><strong>Bethesda API Notes</strong></a>
         <nav aria-label="Documentation">
           <p>Start here</p>
           <a href="#overview">Overview</a>
-          <a href="#trust">Trust & security</a>
-          <a href="#status">Protocol status</a>
+          <a href="#status">Evidence labels</a>
+          <a href="#headers">Required headers</a>
           <p>API</p>
           <a href="#authentication">Authentication</a>
           <a href="#endpoints">Endpoints</a>
-          <a href="#errors">Errors</a>
+          <a href="#response-shape">Response envelope</a>
           <a href="/openapi.yaml">OpenAPI schema ↗</a>
           <p>How-to guides</p>
           <a href="#search-guide">Search addons</a>
-          <a href="#download-guide">Download a ZIP</a>
+          <a href="#download-guide">Download files</a>
           <a href="#draft-guide">Create a draft</a>
           <a href="#upload-guide">Upload a release</a>
-          <a href="#self-host">Self-host</a>
         </nav>
         <a className="back-link" href="https://eso-addon-uploader.bryantjames.com">← Back to Workshop</a>
       </aside>
 
       <main className="docs-main" id="top">
         <header className="docs-topbar">
-          <span>Developer documentation</span>
-          <div><a href="https://github.com/the-jolly-green-bryant/eso-addon-uploader">GitHub</a><a href="/openapi.yaml">OpenAPI</a></div>
+          <span>Unofficial Bethesda protocol reference</span>
+          <div><a href="https://github.com/the-jolly-green-bryant/eso-addon-uploader">Research source</a><a href="/openapi.yaml">OpenAPI</a></div>
         </header>
 
         <article>
           <section className="docs-hero" id="overview">
-            <div className="status-pill">Unofficial, inspectable API adapter</div>
-            <h1>Build with the addon commons.</h1>
-            <p>Reference material for Wayrest Workshop’s same-origin API, the observed Bethesda protocol beneath it, and safe addon publishing workflows.</p>
-            <div className="hero-actions"><a href="#quickstart">Quickstart</a><a className="secondary" href="#endpoints">API reference</a></div>
+            <div className="status-pill">Direct upstream API · no Workshop proxy</div>
+            <h1>Bethesda ESO addon API.</h1>
+            <p>Community-maintained notes for calling Bethesda’s addon service directly, based on observed ESOUploader traffic and requests exercised against the live service.</p>
+            <div className="hero-actions"><a href="#quickstart">Quickstart</a><a className="secondary" href="#endpoints">Endpoint reference</a></div>
           </section>
 
           <section className="callout warning">
-            <strong>Before you integrate</strong>
-            <p>This is not an official Bethesda SDK. The public adapter is pre-1.0, upstream behavior can change without notice, and the archive upload handshake remains inferred. Never embed a Bethesda application key in browser code.</p>
+            <strong>Unofficial and subject to change</strong>
+            <p>Bethesda has not published documentation for this API. Bethesda owns and operates these endpoints. Request your own application key, obey its terms and rate limits, and expect undocumented behavior to change.</p>
           </section>
 
           <section id="quickstart">
             <p className="kicker">QUICKSTART</p>
-            <h2>Search the public catalog</h2>
-            <p>The catalog endpoint is public and returns normalized Bethesda response data. Query parameters are forwarded through a conservative allowlist.</p>
+            <h2>Search Bethesda’s catalog directly</h2>
+            <p>Make this request from a trusted backend. The <code>x-bnet-key</code> application key must not be embedded in a public website, desktop bundle, log, or repository.</p>
             <Code>{`const params = new URLSearchParams({
+  product: "ESO",
   text: "crafting",
   page: "1",
   size: "20",
   sort: "utime",
-  order: "desc"
+  order: "desc",
+  hardware_platforms: "WINDOWS,PLAYSTATION5,XBOXSERIESX",
+  deleted: "false"
 });
 
 const response = await fetch(
-  \`https://eso-addon-uploader.bryantjames.com/api/bethesda/catalog?\${params}\`
+  \`https://api.bethesda.net/ugcmods/v2/content?\${params}\`,
+  { headers: { "x-bnet-key": process.env.BETHESDA_APP_KEY } }
 );
-const { data } = await response.json();`}</Code>
-          </section>
-
-          <section id="trust">
-            <p className="kicker">TRUST & SECURITY</p>
-            <h2>What crosses each boundary</h2>
-            <div className="trust-grid">
-              <div><span>01</span><h3>Browser → Workshop</h3><p>Credentials are sent over HTTPS only during login. The password is not persisted.</p></div>
-              <div><span>02</span><h3>Workshop → Bethesda</h3><p>The server adds its application key and forwards the minimum request required.</p></div>
-              <div><span>03</span><h3>Session storage</h3><p>The token stays in an HttpOnly, Secure, SameSite=Lax cookie unavailable to client JavaScript.</p></div>
-            </div>
-            <p>Do not send authentication requests from third-party origins or build a credential-collecting client around this deployment. Self-host when you need a different trust boundary.</p>
+const body = await response.json();
+const catalog = body.platform?.response ?? body;`}</Code>
           </section>
 
           <section id="status">
             <p className="kicker">EVIDENCE LABELS</p>
             <h2>Read confidence before code</h2>
             <dl className="status-list">
-              <div><dt className="confirmed">Confirmed</dt><dd>Exercised successfully against the live API with expected results.</dd></div>
-              <div><dt className="observed">Observed</dt><dd>Request shape was captured or exercised, but edge cases remain undocumented.</dd></div>
-              <div><dt className="inferred">Inferred</dt><dd>Constructed from adjacent traffic or response clues; treat as experimental.</dd></div>
+              <div><dt className="confirmed">Confirmed</dt><dd>Exercised successfully against Bethesda’s live API with the expected result.</dd></div>
+              <div><dt className="observed">Observed</dt><dd>Seen in ESOUploader traffic or exercised in a limited path; edge cases remain unknown.</dd></div>
+              <div><dt className="inferred">Inferred</dt><dd>Reconstructed from adjacent traffic or response fields. Treat the request shape as experimental.</dd></div>
             </dl>
           </section>
 
+          <section id="headers">
+            <p className="kicker">REQUEST HEADERS</p>
+            <h2>Application and session credentials</h2>
+            <div className="mini-table">
+              <span>x-bnet-key</span><p>Your Bethesda-issued application key. Required by the observed endpoints.</p>
+              <span>x-session-token</span><p>JWT-like token returned by login. Required for author-owned mutations.</p>
+              <span>accept</span><p><code>application/json</code></p>
+              <span>content-type</span><p><code>application/json</code> for JSON operations.</p>
+            </div>
+            <div className="callout"><strong>Protect both credentials.</strong><p>Never publish an application key or session token. Redact passwords, authorization material, presigned storage URLs, and unpublished addon content from captures.</p></div>
+          </section>
+
           <section id="authentication">
-            <p className="kicker">AUTHENTICATION</p>
-            <h2>Cookie-based author sessions</h2>
-            <p>Login accepts JSON and sets the session cookie on success. Browsers include it automatically on later same-origin author operations.</p>
-            <Code>{`await fetch("/api/bethesda/login", {
+            <p className="kicker">AUTHENTICATION · OBSERVED</p>
+            <h2>Create an upstream author session</h2>
+            <p>Login is a direct request to Bethesda. Extract the returned session token from the response and retain it only in protected server-side session storage.</p>
+            <Code>{`const response = await fetch("https://api.bethesda.net/session/login", {
   method: "POST",
-  headers: { "content-type": "application/json" },
-  credentials: "same-origin",
+  headers: {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "x-bnet-key": process.env.BETHESDA_APP_KEY
+  },
   body: JSON.stringify({
-    username: "your-bethesda-username",
-    password: "your-password"
+    username: process.env.BETHESDA_USERNAME,
+    password: process.env.BETHESDA_PASSWORD,
+    language: "en"
   })
-});`}</Code>
-            <div className="callout"><strong>Never log the request body.</strong><p>Passwords, cookies, session tokens, app keys, and presigned URLs must be redacted from diagnostics and traffic captures.</p></div>
+});
+
+const login = await response.json();
+// Find the returned JWT-like token, then send it as x-session-token.
+// Do not persist or log the password.`}</Code>
           </section>
 
           <section id="endpoints">
-            <p className="kicker">API REFERENCE</p>
-            <h2>Endpoints</h2>
+            <p className="kicker">DIRECT BETHESDA API</p>
+            <h2>Observed endpoints</h2>
             <div className="endpoint-list">
               {endpoints.map(([method, path, status, description]) => (
                 <div className="endpoint" key={`${method}${path}`}>
@@ -125,70 +138,91 @@ const { data } = await response.json();`}</Code>
                 </div>
               ))}
             </div>
-            <p className="schema-link">Machine-readable details, parameters, bodies, and response schemas are in the <a href="/openapi.yaml">OpenAPI 3.1 document</a>.</p>
+            <p className="schema-link">Parameters, request bodies, security schemes, and partial response models are in the <a href="/openapi.yaml">OpenAPI 3.1 document</a>.</p>
           </section>
 
-          <section id="errors">
-            <p className="kicker">ERRORS</p>
-            <h2>Predictable failure envelopes</h2>
-            <p>Adapter errors use an <code>error</code> string. Experimental upload errors also include a <code>phase</code> so clients can distinguish initiation, binary transfer, schema drift, and completion failures.</p>
-            <Code>{`{
-  "error": "Bethesda initiated the upload but returned an unfamiliar response.",
-  "phase": "initiate-schema"
-}`}</Code>
-            <div className="mini-table"><span>400</span><p>Invalid or missing input</p><span>401</span><p>Missing or expired author session</p><span>413</span><p>Archive exceeds 200 MB</p><span>502/503</span><p>Upstream failure or server configuration missing</p></div>
+          <section id="response-shape">
+            <p className="kicker">RESPONSES</p>
+            <h2>Unwrap the platform envelope</h2>
+            <p>Many successful and unsuccessful responses nest their useful data beneath <code>platform.response</code>. Code defensively because some responses arrive unwrapped.</p>
+            <Code>{`const body = await response.json();
+const data = body?.platform?.response ?? body;
+const message =
+  body?.platform?.message ??
+  body?.platform?.response?.message ??
+  body?.message;`}</Code>
           </section>
 
           <section id="search-guide">
-            <p className="kicker">HOW TO</p>
+            <p className="kicker">HOW TO · CONFIRMED</p>
             <h2>Search and filter addons</h2>
-            <ol><li>Send <code>GET /api/bethesda/catalog</code>.</li><li>Add <code>text</code>, <code>categories</code>, or <code>author_displayname</code>.</li><li>Paginate with <code>page</code> and <code>size</code>; keep page sizes modest.</li><li>Use <code>hardware_platforms</code> to narrow the default cross-platform results.</li></ol>
+            <ol>
+              <li>Send <code>GET https://api.bethesda.net/ugcmods/v2/content</code>.</li>
+              <li>Set <code>product=ESO</code> and <code>deleted=false</code>.</li>
+              <li>Add <code>text</code>, <code>categories</code>, or <code>author_displayname</code>.</li>
+              <li>Paginate with <code>page</code> and <code>size</code>; the response includes <code>total</code>.</li>
+              <li>Filter platforms with comma-separated <code>hardware_platforms</code>.</li>
+            </ol>
           </section>
 
           <section id="download-guide">
-            <p className="kicker">HOW TO</p>
-            <h2>Download an addon ZIP</h2>
-            <ol><li>Read an addon’s <code>content_id</code> from catalog results.</li><li>Navigate to <code>/api/bethesda/download?id=CONTENT_ID</code>.</li><li>The adapter finds the latest Windows manifest, downloads its files, and returns a reconstructed ZIP.</li></ol>
-            <p>The archive route is memory-bound. Do not use it as a bulk mirror or bypass upstream rate and licensing constraints.</p>
+            <p className="kicker">HOW TO · CONFIRMED</p>
+            <h2>Reconstruct an addon download</h2>
+            <ol>
+              <li>Fetch <code>GET /ugcmods/v2/content/CONTENT_ID</code>.</li>
+              <li>Choose the desired object in <code>download[]</code> by <code>hardware_platform</code>.</li>
+              <li>Choose a release in <code>published[]</code> and inspect its <code>client</code> map.</li>
+              <li>Fetch the client entry whose <code>download_url</code> identifies the manifest.</li>
+              <li>The manifest maps client keys to archive paths. Fetch each corresponding client URL and write it at that path.</li>
+              <li>Package the files locally if a ZIP is required.</li>
+            </ol>
+            <p>Download URLs may be short-lived or presigned. Do not log or redistribute them, and respect each addon author’s license.</p>
           </section>
 
           <section id="draft-guide">
-            <p className="kicker">HOW TO</p>
-            <h2>Create and update a draft</h2>
-            <ol><li>Authenticate in the same browser session.</li><li>POST title, overview, description, and category to <code>/api/bethesda/addons</code>.</li><li>Store the returned <code>content_id</code>.</li><li>PUT later metadata changes to <code>/api/bethesda/addons/CONTENT_ID</code>.</li></ol>
-            <Code>{`const draft = await fetch("/api/bethesda/addons", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    title: "My Addon",
-    overview: "A short public summary",
-    description: "Full description",
-    category: "User Interface"
-  })
-}).then(response => response.json());`}</Code>
+            <p className="kicker">HOW TO · CONFIRMED</p>
+            <h2>Create an unpublished addon draft</h2>
+            <Code>{`const draft = await fetch(
+  "https://api.bethesda.net/ugcmods/v2/content",
+  {
+    method: "POST",
+    headers: {
+      "accept": "application/json",
+      "content-type": "application/json",
+      "x-bnet-key": process.env.BETHESDA_APP_KEY,
+      "x-session-token": sessionToken
+    },
+    body: JSON.stringify({
+      title: "My Addon",
+      overview: "A short public summary",
+      description: "Full Markdown description",
+      product: "ESO",
+      content_type: "STANDARD",
+      hardware_platforms: ["WINDOWS", "PLAYSTATION5", "XBOXSERIESX"],
+      categories: ["User Interface"],
+      default_locale: "EN",
+      supported_locales: ["EN"]
+    })
+  }
+);`}</Code>
+            <p>Store the returned <code>content_id</code>. Update owned metadata with <code>PUT /ugcmods/v2/content/CONTENT_ID</code> using the same authentication headers.</p>
           </section>
 
           <section id="upload-guide">
-            <p className="kicker">HOW TO · EXPERIMENTAL</p>
+            <p className="kicker">HOW TO · INFERRED</p>
             <h2>Upload a release archive</h2>
-            <div className="callout warning"><strong>Keep a local copy.</strong><p>The upstream initiate/PUT/complete sequence is inferred and may change. A failed package upload does not roll back an already-created metadata draft.</p></div>
-            <ol><li>Create <code>FormData</code> containing <code>archive</code>, <code>addonId</code>, <code>version</code>, and <code>note</code>.</li><li>POST it to <code>/api/bethesda/upload</code> from an authenticated session.</li><li>Inspect both HTTP status and any returned <code>phase</code>.</li><li>Verify the release in the author dashboard before considering it complete.</li></ol>
-          </section>
-
-          <section id="self-host">
-            <p className="kicker">HOW TO</p>
-            <h2>Self-host the complete stack</h2>
-            <Code>{`git clone https://github.com/the-jolly-green-bryant/eso-addon-uploader.git
-cd eso-addon-uploader
-cp .env.example .env.local
-npm ci
-npm test
-npm run dev`}</Code>
-            <p>Production requires AWS credentials, a Bethesda application key, and Cloudflare DNS credentials. Review the repository README for the OIDC and SST deployment setup.</p>
+            <div className="callout warning"><strong>Experimental request shape.</strong><p>The initiate/storage PUT/complete handshake has not been fully documented. Keep a local copy, test only against an addon you own, and verify the result in Bethesda’s author tools.</p></div>
+            <ol>
+              <li>POST JSON release metadata to <code>/ugcmods/v2/upload/initiate</code> with both credential headers.</li>
+              <li>Read the upload ID and presigned storage URL from the response.</li>
+              <li>PUT the archive bytes directly to that storage URL and retain its returned <code>ETag</code>.</li>
+              <li>POST the upload ID, content ID, part number, and ETag to <code>/ugcmods/v2/upload/complete</code>.</li>
+            </ol>
+            <p>See the OpenAPI document for the currently inferred fields. Do not assume the storage provider, response nesting, or multipart behavior is stable.</p>
           </section>
 
           <footer className="docs-footer">
-            <p>Built in the open for ESO addon authors.</p>
+            <p>Independent protocol research—not an official Bethesda service.</p>
             <div><a href="https://github.com/the-jolly-green-bryant/eso-addon-uploader/blob/main/SECURITY.md">Security</a><a href="https://github.com/the-jolly-green-bryant/eso-addon-uploader">Source</a></div>
           </footer>
         </article>
