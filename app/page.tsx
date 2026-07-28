@@ -28,6 +28,7 @@ import {
   shieldCheckmarkOutline,
   sparklesOutline,
 } from "ionicons/icons";
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 setupIonicReact();
@@ -289,7 +290,7 @@ export default function Home() {
           <div className="addon-grid">
             {visible.map((addon, index) => (
               <article className="addon-card" key={addon.content_id}>
-                <button className="card-main" onClick={() => setSelected(addon)}>
+                <Link className="card-main" href={`/addons/${encodeURIComponent(addon.content_id)}`}>
                   <div className={`sigil sigil-${index % 4}`}>{addon.title.slice(0, 1)}</div>
                   <div className="card-copy">
                     <div className="card-meta">
@@ -300,7 +301,7 @@ export default function Home() {
                     <p>{addon.overview || "A new creation waiting in the workshop."}</p>
                     <div className="author">by {addon.author_displayname || account || "Unknown artisan"}</div>
                   </div>
-                </button>
+                </Link>
                 <footer>
                   <span><IonIcon icon={arrowDownOutline} /> {formatCount(addon.stats?.totals?.downloads)}</span>
                   <span>{addon.hardware_platforms?.length || 0} platforms</span>
@@ -326,10 +327,6 @@ export default function Home() {
           </div>
         )}
       </section>
-
-      <IonModal isOpen={!!selected && !editorOpen} onDidDismiss={() => setSelected(null)} className="detail-modal">
-        {selected && <AddonDetail addon={selected} onClose={() => setSelected(null)} />}
-      </IonModal>
 
       <IonModal isOpen={loginOpen} onDidDismiss={() => setLoginOpen(false)} className="compact-modal">
         <form className="modal-card" onSubmit={login}>
@@ -376,36 +373,5 @@ export default function Home() {
         </form>
       </IonModal>
     </main>
-  );
-}
-
-function AddonDetail({ addon, onClose }: { addon: Addon; onClose: () => void }) {
-  const latest = addon.download?.[0]?.published?.[0];
-  const files = latest ? Object.values(latest.client).filter((file) => !file.download_url.includes("manifest")) : [];
-  return (
-    <div className="detail">
-      <button className="modal-close" onClick={onClose}><IonIcon icon={closeOutline} /></button>
-      <div className="detail-banner"><div className="detail-sigil">{addon.title[0]}</div></div>
-      <div className="detail-body">
-        <p className="eyebrow">{addon.categories?.[0] || "COMMUNITY ADDON"}</p>
-        <h2>{addon.title}</h2>
-        <p className="byline">Crafted by <strong>{addon.author_displayname}</strong></p>
-        <div className="platforms">{addon.hardware_platforms?.map((platform) => <IonChip key={platform}>{platform.replace("XBOXSERIESX", "XBOX").replace("PLAYSTATION5", "PS5")}</IonChip>)}</div>
-        <p className="detail-description">{addon.description || addon.overview}</p>
-        <div className="detail-stats">
-          <div><strong>{formatCount(addon.stats?.totals?.downloads)}</strong><span>downloads</span></div>
-          <div><strong>{formatCount(addon.stats?.totals?.subscribes)}</strong><span>subscribers</span></div>
-          <div><strong>{latest?.version_name || "Latest"}</strong><span>version</span></div>
-        </div>
-        <div className="detail-actions">
-          <a className="mirror-link" href={mirrorUrl(addon.content_id)} target="_blank" rel="noreferrer">
-            <IonIcon icon={codeSlashOutline} /> View source mirror
-          </a>
-          <a className="download" href={downloadUrl(addon.content_id)} download>
-            <IonIcon icon={arrowDownOutline} /> {files.length ? "Download latest ZIP" : "Prepare ZIP download"}
-          </a>
-        </div>
-      </div>
-    </div>
   );
 }

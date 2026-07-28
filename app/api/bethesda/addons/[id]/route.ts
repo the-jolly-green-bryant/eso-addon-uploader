@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API, bethesdaHeaders, errorResponse, jsonFromBethesda, platformResponse, SESSION_COOKIE } from "../../_client";
 
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const response = await fetch(`${API}/content/${encodeURIComponent(id)}`, {
+    headers: bethesdaHeaders(),
+    cache: "no-store",
+  });
+  const body = await jsonFromBethesda(response);
+  if (!response.ok) return errorResponse(body, response.status);
+  return NextResponse.json(platformResponse(body));
+}
+
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!request.cookies.get(SESSION_COOKIE)) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const { id } = await params;
