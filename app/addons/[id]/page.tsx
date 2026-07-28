@@ -6,6 +6,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { API, bethesdaHeaders, isUuid, jsonFromBethesda, platformResponse, withTimeout } from "../../api/bethesda/_client";
 import { decodeHtmlEntities } from "../../../lib/text";
+import { deletedMirrorAddon } from "../../../lib/mirror";
 import TrackedActions from "./tracked-actions";
 
 type Addon = {
@@ -16,6 +17,9 @@ type Addon = {
   author_displayname?: string;
   categories?: string[];
   hardware_platforms?: string[];
+  published?: boolean;
+  deleted?: boolean;
+  deleted_at?: string;
   stats?: { totals?: { downloads?: number; subscribes?: number } };
   download?: Array<{
     hardware_platform: string;
@@ -28,13 +32,27 @@ type Addon = {
 
 const getAddon = cache(async (id: string): Promise<Addon | null> => {
   if (!isUuid(id)) return null;
-  const response = await fetch(`${API}/content/${encodeURIComponent(id)}`, {
-    ...withTimeout(),
-    headers: bethesdaHeaders(),
-    cache: "no-store",
-  });
-  if (!response.ok) return null;
-  return platformResponse(await jsonFromBethesda(response)) as Addon;
+  const [response, archived] = await Promise.all([
+    fetch(`${API}/content/${encodeURIComponent(id)}`, {
+      ...withTimeout(),
+      headers: bethesdaHeaders(),
+      cache: "no-store",
+    }),
+    deletedMirrorAddon(id),
+  ]);
+  if (response.ok) {
+    const addon = platformResponse(await jsonFromBethesda(response)) as Addon;
+    return archived ? { ...addon, deleted: true, deleted_at: archived.deleted_at } : addon;
+  }
+  return archived ? {
+    content_id: archived.content_id,
+    title: archived.title,
+    overview: "This addon is no longer listed by Bethesda. Its last mirrored release remains preserved.",
+    deleted: true,
+    deleted_at: archived.deleted_at,
+    published: archived.published,
+    hardware_platforms: ["WINDOWS"],
+  } : null;
 });
 
 const formatCount = (count = 0) =>
@@ -89,6 +107,11 @@ export default async function AddonPage({ params }: { params: Promise<{ id: stri
           <p className="eyebrow">{decodeHtmlEntities(addon.categories?.[0] || "COMMUNITY ADDON")}</p>
           <h1>{decodeHtmlEntities(addon.title)}</h1>
           <p className="byline">Crafted by <strong>{decodeHtmlEntities(addon.author_displayname || "Unknown artisan")}</strong></p>
+          {addon.deleted && (
+            <p className="deleted-notice">
+              <strong>Deleted upstream.</strong> Bethesda no longer lists this addon. Wayrest preserves its last observed metadata and mirror so the community can still inspect and download the archived release.
+            </p>
+          )}
 
           <div className="platforms">
             {addon.hardware_platforms?.map((platform) => (

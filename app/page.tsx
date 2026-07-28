@@ -45,6 +45,7 @@ type Addon = {
   categories?: string[];
   hardware_platforms?: string[];
   published?: boolean;
+  deleted?: boolean;
   status?: string;
   stats?: { totals?: { downloads?: number; subscribes?: number } };
   download?: Array<{
@@ -118,7 +119,7 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
       if (category !== "all") params.set("categories", category);
       const response = await fetch(`/api/bethesda/catalog?${params}`);
       const body = await response.json();
-      setAddons(body.data?.length ? body.data : samples);
+      setAddons(Array.isArray(body.data) ? body.data : samples);
       if (query.trim()) {
         track("search", {
           search_term: query.trim(),
@@ -333,6 +334,7 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
                   <div className="card-copy">
                     <div className="card-meta">
                       <span>{decodeHtmlEntities(addon.categories?.[0] || "Community")}</span>
+                      {addon.deleted && <span className="deleted-badge">Deleted upstream</span>}
                       {!addon.published && <span className="draft">Draft</span>}
                     </div>
                     <h3>{decodeHtmlEntities(addon.title)}</h3>

@@ -40,7 +40,10 @@ paths:
         - {name: hardware_platforms, in: query, schema: {type: string, example: "WINDOWS,PLAYSTATION5,XBOXSERIESX"}}
         - {name: sort, in: query, schema: {type: string, default: utime}}
         - {name: order, in: query, schema: {type: string, enum: [asc, desc], default: desc}}
-        - {name: deleted, in: query, schema: {type: boolean, default: false}}
+        - name: deleted
+          in: query
+          schema: {type: boolean, default: false}
+          description: Observed but currently ineffective for the public ESO catalog; true returned the same active-only result set in July 2026.
       responses:
         "200":
           description: Bethesda platform envelope containing a catalog page.

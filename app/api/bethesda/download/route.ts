@@ -12,6 +12,7 @@ import {
   safeExternalHttpsUrl,
   withTimeout,
 } from "../_client";
+import { deletedMirrorAddon, type MirrorAddon } from "../../../../lib/mirror";
 
 const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
@@ -22,6 +23,62 @@ type ClientFile = {
   download_url: string;
   size?: number;
 };
+
+type GitHubEntry = {
+  type?: string;
+  path?: string;
+  size?: number;
+  download_url?: string | null;
+};
+
+async function archivedZip(addon: MirrorAddon): Promise<NextResponse | null> {
+  const queue = [addon.path];
+  const entries: GitHubEntry[] = [];
+  while (queue.length) {
+    const path = queue.shift();
+    if (!path || queue.length + entries.length > MAX_FILES) return null;
+    const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+    const response = await fetch(
+      `https://api.github.com/repos/the-jolly-green-bryant/eso-addon-mirror/contents/${encodedPath}?ref=main`,
+      { ...withTimeout(), headers: { accept: "application/vnd.github+json", "user-agent": "wayrest-workshop/0.1.0" } },
+    );
+    if (!response.ok) return null;
+    const body = await response.json() as unknown;
+    if (!Array.isArray(body)) return null;
+    for (const value of body) {
+      if (!isRecord(value)) continue;
+      const entry = value as GitHubEntry;
+      if (entry.type === "dir" && typeof entry.path === "string") queue.push(entry.path);
+      if (entry.type === "file") entries.push(entry);
+    }
+  }
+
+  const files: Record<string, Uint8Array> = {};
+  let totalBytes = 0;
+  for (const entry of entries) {
+    if (typeof entry.path !== "string" || !entry.path.startsWith(`${addon.path}/`)) return null;
+    const archivePath = entry.path.slice(addon.path.length + 1);
+    if (!isSafeArchivePath(archivePath)) return null;
+    const url = safeExternalHttpsUrl(entry.download_url);
+    if (!url || url.hostname !== "raw.githubusercontent.com") return null;
+    if ((entry.size || 0) > MAX_FILE_BYTES || totalBytes + (entry.size || 0) > MAX_TOTAL_BYTES) return null;
+    const bytes = await readResponseBytes(await fetch(url, withTimeout()), Math.min(MAX_FILE_BYTES, MAX_TOTAL_BYTES - totalBytes));
+    totalBytes += bytes.byteLength;
+    files[archivePath] = bytes;
+  }
+  if (!Object.keys(files).length) return null;
+
+  const safeTitle = addon.title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 100) || "eso-addon";
+  return new NextResponse(zipSync(files, { level: 6 }), {
+    headers: {
+      "content-type": "application/zip",
+      "content-disposition": `attachment; filename="${safeTitle}-archived.zip"`,
+      "cache-control": "public, max-age=300",
+      "x-content-type-options": "nosniff",
+      "x-archive-source": "eso-addon-mirror",
+    },
+  });
+}
 
 function isSafeArchivePath(value: string): boolean {
   if (!value || value.length > 512 || value.includes("\0") || value.startsWith("/") || value.startsWith("\\")) return false;
@@ -57,15 +114,24 @@ export async function GET(request: NextRequest) {
   if (!isUuid(id)) return jsonError("A valid addon ID is required.", 400);
 
   try {
-    const response = await fetch(`${API}/content/${encodeURIComponent(id)}`, {
-      ...withTimeout(),
-      headers: bethesdaHeaders(),
-    });
+    const [response, archived] = await Promise.all([
+      fetch(`${API}/content/${encodeURIComponent(id)}`, {
+        ...withTimeout(),
+        headers: bethesdaHeaders(),
+      }),
+      deletedMirrorAddon(id),
+    ]);
     const body = platformResponse(await jsonFromBethesda(response));
-    if (!response.ok) return jsonError("Addon could not be loaded.", response.status);
+    if (!response.ok) {
+      const fallback = archived && await archivedZip(archived);
+      return fallback || jsonError("Addon could not be loaded from Bethesda or the public mirror.", response.status);
+    }
 
     const release = clientEntries(body);
-    if (!release) return jsonError("No downloadable Windows release is available.", 404);
+    if (!release) {
+      const fallback = archived && await archivedZip(archived);
+      return fallback || jsonError("No downloadable Windows release is available.", 404);
+    }
     const manifest = Object.values(release.entries).find((file) => file.download_url.includes("manifest"));
     const manifestUrl = safeExternalHttpsUrl(manifest?.download_url);
     if (!manifestUrl) return jsonError("The release manifest URL is invalid.", 502);

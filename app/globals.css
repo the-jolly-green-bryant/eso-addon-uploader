@@ -100,6 +100,8 @@ button { color: inherit; }
 .card-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .card-meta { display: flex; gap: 8px; align-items: center; color: var(--gold); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
 .draft { color: var(--white); background: var(--moss); border-radius: 999px; padding: 3px 7px; }
+.deleted-badge { color: #fff; background: #8b3d32; border-radius: 999px; padding: 3px 7px; }
+.deleted-notice { margin: 20px 0; padding: 14px 16px; border: 1px solid #d9b2a9; border-radius: 9px; background: #fff1ed; color: #713127; line-height: 1.5; }
 .card-copy h3 { margin: 9px 0 8px; font: 600 clamp(19px, 1.8vw, 22px)/1.15 Georgia, serif; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .card-copy p { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin: 0 0 15px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .author { margin-top: auto; font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }

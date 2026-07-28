@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API, bethesdaHeaders, hasAppKey, jsonFromBethesda, platformResponse, withTimeout } from "../_client";
+import { deletedMirrorAddons } from "../../../../lib/mirror";
 
 const allowedSortFields = new Set(["ctime", "ptime", "title", "utime"]);
 const allowedPlatforms = new Set(["PLAYSTATION5", "WINDOWS", "XBOXSERIESX"]);
@@ -30,12 +31,27 @@ export async function GET(request: NextRequest) {
     const value = incoming.get(key)?.trim();
     if (value) params.set(key, value.slice(0, 200));
   }
-  const response = await fetch(`${API}/content?${params}`, {
-    ...withTimeout(),
-    headers: bethesdaHeaders(),
-    cache: "no-store",
-  });
+  const [response, archived] = await Promise.all([
+    fetch(`${API}/content?${params}`, {
+      ...withTimeout(),
+      headers: bethesdaHeaders(),
+      cache: "no-store",
+    }),
+    deletedMirrorAddons(),
+  ]);
   const body = await jsonFromBethesda(response);
   if (!response.ok) return NextResponse.json({ data: [], upstream: response.status }, { status: response.status });
-  return NextResponse.json(platformResponse(body));
+
+  const catalog = platformResponse<{ data?: unknown[]; total?: number }>(body);
+  const text = (incoming.get("text") || "").trim().toLocaleLowerCase();
+  const category = (incoming.get("categories") || "").trim().toLocaleLowerCase();
+  const archivedMatches = archived.filter((addon) =>
+    (!text || addon.title.toLocaleLowerCase().includes(text)) &&
+    (!category || category === "all"),
+  );
+  return NextResponse.json({
+    ...catalog,
+    data: [...(Array.isArray(catalog.data) ? catalog.data : []), ...archivedMatches],
+    total: (typeof catalog.total === "number" ? catalog.total : 0) + archivedMatches.length,
+  });
 }

@@ -158,7 +158,8 @@ const message =
             <h2>Search and filter addons</h2>
             <ol>
               <li>Send <code>GET https://api.bethesda.net/ugcmods/v2/content</code>.</li>
-              <li>Set <code>product=ESO</code> and <code>deleted=false</code>.</li>
+              <li>Set <code>product=ESO</code>. Bethesda accepts <code>deleted</code>, but live testing found that <code>true</code> still returns the same active-only catalog.</li>
+              <li>Preserve disappearing IDs and their last release yourself if deleted-content availability matters; Bethesda does not currently expose public tombstones.</li>
               <li>Add <code>text</code>, <code>categories</code>, or <code>author_displayname</code>.</li>
               <li>Paginate with <code>page</code> and <code>size</code>; the response includes <code>total</code>.</li>
               <li>Filter platforms with comma-separated <code>hardware_platforms</code>.</li>
