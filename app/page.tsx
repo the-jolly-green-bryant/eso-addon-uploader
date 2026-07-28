@@ -97,7 +97,7 @@ const downloadUrl = (contentId: string) =>
   `/api/bethesda/download?id=${encodeURIComponent(contentId)}`;
 
 export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | "mine" }) {
-  const [tab, setTab] = useState<"explore" | "mine">(initialTab);
+  const tab = initialTab;
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [addons, setAddons] = useState<Addon[]>(samples);
@@ -185,7 +185,7 @@ export function AddonApp({ initialTab = "explore" }: { initialTab?: "explore" | 
     await fetch("/api/bethesda/logout", { method: "POST" });
     setAccount(null);
     setMine([]);
-    setTab("explore");
+    window.location.assign("/");
   }
 
   async function saveAddon(event: FormEvent<HTMLFormElement>) {
