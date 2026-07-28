@@ -1,183 +1,120 @@
 # Wayrest Workshop
 
-An open-source, cross-platform browser for Elder Scrolls Online addons, with
-Bethesda login, addon management, and an experimental publishing workflow.
+**ESO addon publishing should be open, understandable, and available on every
+platform.**
 
-**Live site:** [eso-addon-uploader.bryantjames.com](https://eso-addon-uploader.bryantjames.com)
+[Browse addons](https://eso-addon-uploader.bryantjames.com) ·
+[Read the API research](https://docs.eso-addon-uploader.bryantjames.com) ·
+[Review the source](https://github.com/the-jolly-green-bryant/eso-addon-uploader)
 
-**Developer docs:** [docs.eso-addon-uploader.bryantjames.com](https://docs.eso-addon-uploader.bryantjames.com)
+> Wayrest Workshop is an independent community project. It is not affiliated
+> with, endorsed by, or supported by Bethesda Softworks, ZeniMax Online
+> Studios, or The Elder Scrolls Online.
 
-> This is an independent community project. It is not affiliated with,
-> endorsed by, or supported by Bethesda Softworks, ZeniMax Online Studios, or
-> The Elder Scrolls Online.
+## Why this project exists
 
-## Why this exists
+ESO addon authors are currently asked to trust a closed-source, Windows-only
+utility to publish their work. That creates two problems.
 
-Addon publishing should not require trusting an opaque Windows-only executable.
-Wayrest Workshop makes the client and its protocol adapter inspectable. Mac,
-Linux, Windows, and mobile users can browse and download addons in a web
-browser, while maintainers can audit exactly what happens to credentials,
-archives, and metadata.
+First, platform choice becomes a gatekeeper. Authors on macOS and Linux cannot
+participate in the same workflow without finding a Windows machine, using a
+virtual machine, or handing the task to someone else.
 
-Open source does not magically create trust. It makes trust *verifiable*. This
-project therefore keeps the sensitive surface small, documents what has been
-observed versus inferred, and avoids claiming guarantees the upstream API does
-not provide.
+Second, trust cannot be independently verified. A publishing utility handles
+account credentials, session tokens, addon archives, and unpublished metadata.
+When its source and network behavior are hidden, users must accept claims about
+that sensitive data without being able to inspect them.
 
-## Trust model
+Wayrest Workshop exists because neither limitation is necessary. A browser can
+provide a cross-platform experience, and a public implementation can make the
+entire path from user action to upstream request reviewable.
 
-- Your Bethesda password is submitted only to a same-origin server route over
-  HTTPS. The application does not save it.
-- The resulting session token is stored in an `HttpOnly`, `Secure`,
-  `SameSite=Lax` cookie, so browser JavaScript cannot read it.
-- The Bethesda application key stays server-side in AWS and GitHub Actions. It
-  is not compiled into the browser bundle.
-- Public browsing and downloads do not require login.
-- There is no advertising SDK. The production deployment uses the narrowly
-  scoped Google Analytics events described below; credentials and archive
-  contents are excluded.
-- Source, infrastructure configuration, and deployment workflow are public.
-- Publishing remains an explicit user action. An upload is never initiated in
-  the background.
+## Open source is the trust model
 
-You still trust the operator of the deployment you use, its cloud account,
-GitHub Actions, AWS, and Bethesda's API. For maximum control, review the code
-and deploy your own copy. Use a unique password and never paste credentials
-into an issue, log, or network capture.
+Open source does not eliminate trust. It makes trust specific and testable.
 
-See [SECURITY.md](SECURITY.md) for reporting and credential-handling guidance.
+With Wayrest Workshop, anyone can inspect:
 
-## Current capabilities
+- where Bethesda credentials are sent;
+- how authenticated sessions are stored;
+- which requests are made when browsing, downloading, or publishing;
+- what information is measured by analytics;
+- how addon ZIP archives are reconstructed and validated;
+- how the application is built and deployed.
 
-| Capability | Status |
-| --- | --- |
-| Browse and search the public addon catalog | Working |
-| View addon details | Working |
-| Reconstruct and download addon ZIP archives | Working |
-| Bethesda authentication | Working |
-| View addons owned by the signed-in account | Working |
-| Create an addon draft | Working, based on observed API behavior |
-| Edit owned addon metadata | Working, based on observed API behavior |
-| Upload archive contents | Experimental; upstream handshake is inferred |
+The project intentionally keeps Bethesda credentials and session tokens out of
+browser-readable storage. Passwords are not retained, application keys remain
+server-side, authenticated mutations are same-origin protected, and downloads
+are bounded and checked for unsafe archive paths.
 
-The upload flow is deliberately labeled experimental. Bethesda offered API
-access but did not publish a schema, so the adapter is based on observed
-requests and conservative inference. Upstream changes may break it. Please
-avoid using irreplaceable archives without retaining a local copy.
+That still leaves real trust boundaries. Users of the hosted service trust its
+operator, GitHub Actions, AWS, Cloudflare, and Bethesda. Those boundaries are
+named plainly because security claims are useful only when their limits are
+also visible. Anyone who wants a different trust boundary can audit the code
+and operate an independent deployment.
 
-## Architecture
+## Why a website
 
-```mermaid
-flowchart LR
-  B["Ionic React UI"] --> N["Next.js same-origin API routes"]
-  N --> A["Bethesda addon API"]
-  N --> C["HttpOnly session cookie"]
-  G["GitHub Actions (OIDC)"] --> S["SST / OpenNext"]
-  S --> W["AWS Lambda + CloudFront + S3"]
-  W --> D["eso-addon-uploader.bryantjames.com"]
-```
+A website gives addon users and authors one consistent experience across
+Windows, macOS, Linux, and mobile devices. It also makes the public catalog
+searchable and indexable, gives every addon a linkable page, and removes the
+need to install another privileged desktop utility merely to exchange a ZIP
+file.
 
-The browser never calls Bethesda directly. Next.js route handlers normalize
-the upstream responses, keep the application key private, and isolate protocol
-changes from the UI. The deployment uses SST's OpenNext adapter on AWS.
+The goal is not to place a new proprietary middleman between creators and
+Bethesda. The website is a transparent client for Bethesda's addon service.
+The accompanying documentation describes the observed Bethesda API directly,
+including which behavior is confirmed, observed, or inferred.
 
-Server routes validate identifiers and bounded input, enforce same-origin
-checks on authenticated mutations, apply upstream timeouts, and reject
-untrusted download URLs and unsafe archive paths. Reconstructed ZIP downloads
-also enforce per-file, manifest, file-count, and total-size limits.
+## What the project is trying to prove
 
-## Local development
+Wayrest Workshop is building toward a simple standard:
 
-Requirements:
+> An addon author should be able to understand exactly what will happen before
+> signing in or publishing a file.
 
-- Node.js 22+
-- npm
-- A Bethesda-provided application key for authenticated operations
+Today, the project can browse and search the public catalog, display individual
+addon pages, reconstruct downloadable ZIP archives, authenticate Bethesda
+authors, manage owned addons, and exercise an experimental publishing flow.
 
-```bash
-git clone https://github.com/the-jolly-green-bryant/eso-addon-uploader.git
-cd eso-addon-uploader
-cp .env.example .env.local
-# Add BETHESDA_APP_KEY to .env.local
-npm ci
-npm run dev
-```
+Publishing is labeled experimental because Bethesda has offered API access
+without publishing a schema. The implementation is based on observed requests
+and conservative inference, and it may need to evolve when upstream behavior
+changes. The project will not disguise that uncertainty as a guarantee.
 
-Open <http://localhost:3000>. Environment files are gitignored. Never commit an
-application key, password, session cookie, presigned URL, or traffic capture
-containing authorization headers.
+## Principles
 
-Run the full local gate with:
+- **Cross-platform by default.** Authors should not need Windows to participate.
+- **Inspectability over assurances.** Important claims should be verifiable in
+  code and network behavior.
+- **Direct documentation.** API research should explain Bethesda's interface,
+  not invent an undocumented proprietary layer.
+- **Explicit uncertainty.** Observed and inferred behavior must not be presented
+  as official documentation.
+- **Minimal sensitive data.** Credentials, tokens, archives, and analytics
+  should be handled only as required for a user-requested action.
+- **No lock-in.** The source and deployment model should allow independent
+  review, contribution, and operation.
 
-```bash
-npm test
-```
+## Privacy without euphemisms
 
-## AWS deployment
+The production site uses Google Analytics 4 for page views and a small set of
+product events: searches, addon-detail visits, mirror visits, ZIP downloads,
+successful logins, and addon draft creation or updates.
 
-Production is described in [`sst.config.ts`](sst.config.ts) and deployed by
-[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). Every pull
-request runs unit tests, lint, strict type checking, and a production build. A
-successful push to `main` deploys the production stage.
+Bethesda usernames, passwords, session tokens, and archive contents are not
+included in analytics events. Search terms are measured because they reveal
+whether the catalog works well, so users should not enter personal information
+into search.
 
-Prerequisites:
+## Where the practical documentation lives
 
-1. An AWS account for the application runtime and a Cloudflare-managed
-   `bryantjames.com` DNS zone.
-2. A GitHub OIDC IAM role trusted only by this repository and main branch.
-3. A GitHub `production` environment with:
-   - `AWS_ROLE_ARN` — the deploy role ARN.
-   - `BETHESDA_APP_KEY` — the server-only Bethesda application key.
-   - `CLOUDFLARE_API_TOKEN` — a narrowly scoped token with Zone DNS Edit.
-   - `CLOUDFLARE_DEFAULT_ACCOUNT_ID` — the Cloudflare account ID.
-4. Optional GitHub environment protection rules for production approval.
+This README explains why Wayrest Workshop should exist. Installation,
+architecture, deployment, API findings, and contribution guidance belong in
+the [developer documentation](https://docs.eso-addon-uploader.bryantjames.com),
+where they can be maintained as task-oriented references.
 
-No long-lived AWS access key is stored in GitHub. Actions exchanges its signed
-OIDC identity for short-lived AWS credentials. SST provisions the application,
-CloudFront distribution, and TLS certificate on AWS, then maintains the
-`eso-addon-uploader.bryantjames.com` DNS record through Cloudflare.
-
-To deploy from an authenticated workstation:
-
-```bash
-BETHESDA_APP_KEY=... npm run deploy
-```
-
-## Protocol research
-
-Treat captured traffic as sensitive source material:
-
-- Capture only traffic from an account and machine you control.
-- Redact authorization headers, cookies, passwords, app keys, presigned URLs,
-  device identifiers, and unpublished addon content.
-- Commit distilled schemas, fixtures with synthetic values, and explanations;
-  never commit raw captures.
-- Mark endpoints as **confirmed**, **observed**, or **inferred**.
-- Keep upstream calls minimal and do not bypass authorization or rate limits.
-
-The adapter lives under [`app/api/bethesda`](app/api/bethesda). Contributions
-that improve validation, fixtures, error handling, or endpoint documentation
-are especially welcome.
-
-## Analytics and privacy
-
-Production uses Google Analytics 4 to measure page views and a small set of
-product events: catalog searches, addon detail clicks, mirror visits, ZIP
-downloads, successful Bethesda logins, and addon draft creation or updates.
-Bethesda usernames, passwords, session tokens, and archive contents are never
-sent as analytics parameters. Search terms are measured because they directly
-inform catalog usability; do not enter personal information into search.
-
-## Contributing
-
-Open an issue before undertaking a large protocol or UI change. Keep captured
-data out of pull requests, include a test or reproducible validation where
-possible, and explain whether endpoint behavior was observed or inferred.
-
-This project follows the principle that users should be able to understand
-what is sent, where it is sent, and why. Changes that obscure those answers
-will not be accepted.
-
-## License
-
-[MIT](LICENSE)
+Security concerns can be reported through
+[`SECURITY.md`](https://github.com/the-jolly-green-bryant/eso-addon-uploader/blob/main/SECURITY.md).
+The project is available under the
+[`MIT License`](https://github.com/the-jolly-green-bryant/eso-addon-uploader/blob/main/LICENSE).
