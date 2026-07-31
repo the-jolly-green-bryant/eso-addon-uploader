@@ -15,15 +15,22 @@ import {
 } from "../_client";
 
 export async function POST(request: NextRequest) {
-  if (!hasTrustedOrigin(request)) return jsonError("Cross-site addon requests are not allowed.", 403);
-  if (!request.cookies.get(SESSION_COOKIE)) return jsonError("Sign in first.", 401);
+  if (!hasTrustedOrigin(request))
+    return jsonError("Cross-site addon requests are not allowed.", 403);
+  if (!request.cookies.get(SESSION_COOKIE))
+    return jsonError("Sign in first.", 401);
   const input = await readJsonObject(request, 128 * 1024);
   if (!input) return jsonError("A valid JSON request body is required.", 400);
   const title = requiredString(input, "title", { maxLength: 120 });
   const overview = requiredString(input, "overview", { maxLength: 180 });
-  const description = requiredString(input, "description", { maxLength: 100_000 });
+  const description = requiredString(input, "description", {
+    maxLength: 100_000,
+  });
   if (!title || !overview || !description) {
-    return jsonError("Title, overview, and description are required and must fit their length limits.", 400);
+    return jsonError(
+      "Title, overview, and description are required and must fit their length limits.",
+      400,
+    );
   }
   const payload = {
     title,

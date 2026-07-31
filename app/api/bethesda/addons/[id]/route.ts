@@ -15,7 +15,10 @@ import {
   withTimeout,
 } from "../../_client";
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   if (!isUuid(id)) return jsonError("A valid addon ID is required.", 400);
   const response = await fetch(`${API}/content/${encodeURIComponent(id)}`, {
@@ -28,18 +31,28 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json(platformResponse(body));
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!hasTrustedOrigin(request)) return jsonError("Cross-site addon requests are not allowed.", 403);
-  if (!request.cookies.get(SESSION_COOKIE)) return jsonError("Sign in first.", 401);
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!hasTrustedOrigin(request))
+    return jsonError("Cross-site addon requests are not allowed.", 403);
+  if (!request.cookies.get(SESSION_COOKIE))
+    return jsonError("Sign in first.", 401);
   const { id } = await params;
   if (!isUuid(id)) return jsonError("A valid addon ID is required.", 400);
   const input = await readJsonObject(request, 128 * 1024);
   if (!input) return jsonError("A valid JSON request body is required.", 400);
   const title = requiredString(input, "title", { maxLength: 120 });
   const overview = requiredString(input, "overview", { maxLength: 180 });
-  const description = requiredString(input, "description", { maxLength: 100_000 });
+  const description = requiredString(input, "description", {
+    maxLength: 100_000,
+  });
   if (!title || !overview || !description) {
-    return jsonError("Title, overview, and description are required and must fit their length limits.", 400);
+    return jsonError(
+      "Title, overview, and description are required and must fit their length limits.",
+      400,
+    );
   }
   const response = await fetch(`${API}/content/${encodeURIComponent(id)}`, {
     ...withTimeout(),

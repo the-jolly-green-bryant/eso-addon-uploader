@@ -43,16 +43,25 @@ function findUploadId(value: unknown): string | null {
 }
 
 export async function POST(request: NextRequest) {
-  if (!hasTrustedOrigin(request)) return jsonError("Cross-site upload requests are not allowed.", 403);
-  if (!request.cookies.get(SESSION_COOKIE)) return jsonError("Sign in first.", 401);
+  if (!hasTrustedOrigin(request))
+    return jsonError("Cross-site upload requests are not allowed.", 403);
+  if (!request.cookies.get(SESSION_COOKIE))
+    return jsonError("Sign in first.", 401);
   const form = await request.formData();
   const archive = form.get("archive");
   const addonId = String(form.get("addonId") || "").trim();
-  if (!(archive instanceof File) || !isUuid(addonId)) return jsonError("A ZIP and valid addon ID are required.", 400);
-  if (!archive.size || archive.size > 200 * 1024 * 1024) return jsonError("The ZIP must be between 1 byte and 200 MB.", 413);
-  if (!archive.name.toLowerCase().endsWith(".zip")) return jsonError("The addon package must be a ZIP file.", 400);
-  const version = String(form.get("version") || "1.0.0").trim().slice(0, 50);
-  const note = String(form.get("note") || "").trim().slice(0, 2_000);
+  if (!(archive instanceof File) || !isUuid(addonId))
+    return jsonError("A ZIP and valid addon ID are required.", 400);
+  if (!archive.size || archive.size > 200 * 1024 * 1024)
+    return jsonError("The ZIP must be between 1 byte and 200 MB.", 413);
+  if (!archive.name.toLowerCase().endsWith(".zip"))
+    return jsonError("The addon package must be a ZIP file.", 400);
+  const version = String(form.get("version") || "1.0.0")
+    .trim()
+    .slice(0, 50);
+  const note = String(form.get("note") || "")
+    .trim()
+    .slice(0, 2_000);
 
   const initiatePayload = {
     content_id: addonId,
@@ -74,26 +83,56 @@ export async function POST(request: NextRequest) {
   });
   const initiatedBody = await jsonFromBethesda(initiated);
   if (!initiated.ok) {
-    return NextResponse.json({
-      error: upstreamMessage(initiatedBody, "Bethesda rejected upload initiation."),
-      phase: "initiate",
-    }, { status: initiated.status });
+    return NextResponse.json(
+      {
+        error: upstreamMessage(
+          initiatedBody,
+          "Bethesda rejected upload initiation.",
+        ),
+        phase: "initiate",
+      },
+      { status: initiated.status },
+    );
   }
 
   const upload = platformResponse(initiatedBody);
   const uploadUrl = safeExternalHttpsUrl(findUploadUrl(upload));
   const uploadId = findUploadId(upload);
   if (!uploadUrl || !uploadId) {
-    return NextResponse.json({ error: "Bethesda initiated the upload but returned an unfamiliar response.", phase: "initiate-schema" }, { status: 502 });
+    return NextResponse.json(
+      {
+        error:
+          "Bethesda initiated the upload but returned an unfamiliar response.",
+        phase: "initiate-schema",
+      },
+      { status: 502 },
+    );
   }
-  const uploaded = await fetch(uploadUrl, withTimeout({
-    method: "PUT",
-    headers: { "content-type": "application/zip" },
-    body: await archive.arrayBuffer(),
-  }, 120_000));
-  if (!uploaded.ok) return NextResponse.json({ error: "The binary storage upload failed.", phase: "binary" }, { status: uploaded.status });
+  const uploaded = await fetch(
+    uploadUrl,
+    withTimeout(
+      {
+        method: "PUT",
+        headers: { "content-type": "application/zip" },
+        body: await archive.arrayBuffer(),
+      },
+      120_000,
+    ),
+  );
+  if (!uploaded.ok)
+    return NextResponse.json(
+      { error: "The binary storage upload failed.", phase: "binary" },
+      { status: uploaded.status },
+    );
   const etag = uploaded.headers.get("etag")?.replaceAll('"', "");
-  if (!etag) return NextResponse.json({ error: "The binary storage upload did not return an ETag.", phase: "binary" }, { status: 502 });
+  if (!etag)
+    return NextResponse.json(
+      {
+        error: "The binary storage upload did not return an ETag.",
+        phase: "binary",
+      },
+      { status: 502 },
+    );
 
   const completed = await fetch(`${API}/upload/complete`, {
     ...withTimeout(),
@@ -107,9 +146,16 @@ export async function POST(request: NextRequest) {
     }),
   });
   const completedBody = await jsonFromBethesda(completed);
-  if (!completed.ok) return NextResponse.json({
-    error: upstreamMessage(completedBody, "Bethesda could not finalize the package."),
-    phase: "complete",
-  }, { status: completed.status });
+  if (!completed.ok)
+    return NextResponse.json(
+      {
+        error: upstreamMessage(
+          completedBody,
+          "Bethesda could not finalize the package.",
+        ),
+        phase: "complete",
+      },
+      { status: completed.status },
+    );
   return NextResponse.json(platformResponse(completedBody));
 }

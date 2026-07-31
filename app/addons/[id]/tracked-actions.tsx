@@ -20,7 +20,12 @@ export default function TrackedActions({
         href={mirrorUrl}
         target="_blank"
         rel="noreferrer"
-        onClick={() => track("addon_mirror_click", { addon_id: contentId, addon_title: title })}
+        onClick={() =>
+          track("addon_mirror_click", {
+            addon_id: contentId,
+            addon_title: title,
+          })
+        }
       >
         &lt;/&gt; View source mirror
       </a>
@@ -28,7 +33,13 @@ export default function TrackedActions({
         className="download"
         href={downloadUrl}
         download
-        onClick={() => track("file_download", { addon_id: contentId, addon_title: title, file_extension: "zip" })}
+        onClick={() =>
+          track("file_download", {
+            addon_id: contentId,
+            addon_title: title,
+            file_extension: "zip",
+          })
+        }
       >
         ↓ Download latest ZIP
       </a>

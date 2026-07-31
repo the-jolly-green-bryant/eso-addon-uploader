@@ -1,4 +1,4 @@
-# Wayrest Workshop
+# ESO Addon Workshop
 
 **ESO addon publishing should be open, understandable, and available on every
 platform.**
@@ -7,7 +7,7 @@ platform.**
 [Read the API research](https://docs.eso-addon-uploader.bryantjames.com) ·
 [Review the source](https://github.com/the-jolly-green-bryant/eso-addon-uploader)
 
-> Wayrest Workshop is an independent community project. It is not affiliated
+> ESO Addon Workshop is an independent community project. It is not affiliated
 > with, endorsed by, or supported by Bethesda Softworks, ZeniMax Online
 > Studios, or The Elder Scrolls Online.
 
@@ -25,7 +25,7 @@ account credentials, session tokens, addon archives, and unpublished metadata.
 When its source and network behavior are hidden, users must accept claims about
 that sensitive data without being able to inspect them.
 
-Wayrest Workshop exists because neither limitation is necessary. A browser can
+ESO Addon Workshop exists because neither limitation is necessary. A browser can
 provide a cross-platform experience, and a public implementation can make the
 entire path from user action to upstream request reviewable.
 
@@ -33,7 +33,7 @@ entire path from user action to upstream request reviewable.
 
 Open source does not eliminate trust. It makes trust specific and testable.
 
-With Wayrest Workshop, anyone can inspect:
+With ESO Addon Workshop, anyone can inspect:
 
 - where Bethesda credentials are sent;
 - how authenticated sessions are stored;
@@ -68,7 +68,7 @@ including which behavior is confirmed, observed, or inferred.
 
 ## What the project is trying to prove
 
-Wayrest Workshop is building toward a simple standard:
+ESO Addon Workshop is building toward a simple standard:
 
 > An addon author should be able to understand exactly what will happen before
 > signing in or publishing a file.
@@ -109,7 +109,7 @@ into search.
 
 ## Where the practical documentation lives
 
-This README explains why Wayrest Workshop should exist. Installation,
+This README explains why ESO Addon Workshop should exist. Installation,
 architecture, deployment, API findings, and contribution guidance belong in
 the [developer documentation](https://docs.eso-addon-uploader.bryantjames.com),
 where they can be maintained as task-oriented references.

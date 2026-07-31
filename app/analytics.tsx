@@ -26,7 +26,10 @@ export default function Analytics() {
 
   return (
     <>
-      <Script src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`} strategy="afterInteractive" />
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+        strategy="afterInteractive"
+      />
       <Script id="google-analytics" strategy="afterInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
@@ -36,7 +39,9 @@ export default function Analytics() {
           gtag('config', '${measurementId}', { send_page_view: false });
         `}
       </Script>
-      <Suspense fallback={null}><RouteAnalytics /></Suspense>
+      <Suspense fallback={null}>
+        <RouteAnalytics />
+      </Suspense>
     </>
   );
 }

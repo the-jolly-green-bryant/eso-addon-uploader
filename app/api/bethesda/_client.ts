@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  isRecord,
-  type JsonRecord,
-  upstreamMessage,
-} from "@/lib/protocol";
+import { isRecord, type JsonRecord, upstreamMessage } from "@/lib/protocol";
 
 export {
   isRecord,
@@ -23,7 +19,7 @@ export function bethesdaHeaders(request?: NextRequest, authenticated = false) {
   const headers = new Headers({
     accept: "application/json",
     "content-type": "application/json",
-    "user-agent": "wayrest-workshop/0.1.0",
+    "user-agent": "eso-addon-workshop/0.1.0",
   });
   if (appKey()) headers.set("x-bnet-key", appKey());
   if (authenticated) {
@@ -43,17 +39,17 @@ export async function jsonFromBethesda(response: Response) {
 }
 
 export function errorResponse(body: unknown, status = 502) {
-  return NextResponse.json(
-    { error: upstreamMessage(body) },
-    { status },
-  );
+  return NextResponse.json({ error: upstreamMessage(body) }, { status });
 }
 
 export function jsonError(error: string, status: number) {
   return NextResponse.json({ error }, { status });
 }
 
-export async function readJsonObject(request: NextRequest, maxBytes = 32_768): Promise<JsonRecord | null> {
+export async function readJsonObject(
+  request: NextRequest,
+  maxBytes = 32_768,
+): Promise<JsonRecord | null> {
   const declaredLength = Number(request.headers.get("content-length") || "0");
   if (declaredLength > maxBytes) return null;
   if (!request.body) return null;
@@ -92,11 +88,16 @@ export function requiredString(
   const value = input[key];
   if (typeof value !== "string") return null;
   const normalized = value.trim();
-  if (normalized.length < minLength || normalized.length > maxLength) return null;
+  if (normalized.length < minLength || normalized.length > maxLength)
+    return null;
   return normalized;
 }
 
-export function optionalString(input: JsonRecord, key: string, maxLength: number): string {
+export function optionalString(
+  input: JsonRecord,
+  key: string,
+  maxLength: number,
+): string {
   const value = input[key];
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
@@ -107,21 +108,30 @@ export function hasTrustedOrigin(request: NextRequest): boolean {
   if (!origin) return true;
   try {
     const originHost = new URL(origin).host;
-    const requestHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const requestHost =
+      request.headers.get("x-forwarded-host") || request.headers.get("host");
     return Boolean(requestHost && originHost === requestHost);
   } catch {
     return false;
   }
 }
 
-export function withTimeout(init: RequestInit = {}, timeoutMs = UPSTREAM_TIMEOUT_MS): RequestInit {
+export function withTimeout(
+  init: RequestInit = {},
+  timeoutMs = UPSTREAM_TIMEOUT_MS,
+): RequestInit {
   return { ...init, signal: init.signal ?? AbortSignal.timeout(timeoutMs) };
 }
 
-export async function readResponseBytes(response: Response, maxBytes: number): Promise<Uint8Array> {
-  if (!response.ok) throw new Error(`Upstream file returned ${response.status}`);
+export async function readResponseBytes(
+  response: Response,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  if (!response.ok)
+    throw new Error(`Upstream file returned ${response.status}`);
   const declaredLength = Number(response.headers.get("content-length") || "0");
-  if (declaredLength > maxBytes) throw new Error("Upstream file exceeds the download limit");
+  if (declaredLength > maxBytes)
+    throw new Error("Upstream file exceeds the download limit");
   if (!response.body) return new Uint8Array();
 
   const reader = response.body.getReader();
@@ -147,7 +157,12 @@ export async function readResponseBytes(response: Response, maxBytes: number): P
 }
 
 export function findJwt(value: unknown): string | null {
-  if (typeof value === "string" && value.split(".").length === 3 && value.startsWith("eyJ")) return value;
+  if (
+    typeof value === "string" &&
+    value.split(".").length === 3 &&
+    value.startsWith("eyJ")
+  )
+    return value;
   if (Array.isArray(value)) {
     for (const item of value) {
       const result = findJwt(item);
