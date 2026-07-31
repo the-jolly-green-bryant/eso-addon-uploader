@@ -36,6 +36,8 @@ import Brand from "./brand";
 import { track } from "../lib/analytics";
 import { decodeHtmlEntities } from "../lib/text";
 
+setupIonicReact();
+
 type Addon = {
   content_id: string;
   title: string;
@@ -104,10 +106,6 @@ export function AddonApp({
 }: {
   initialTab?: "explore" | "mine";
 }) {
-  useEffect(() => {
-    setupIonicReact();
-  }, []);
-
   const tab = initialTab;
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
