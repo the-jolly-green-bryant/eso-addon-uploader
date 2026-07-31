@@ -32,6 +32,9 @@ type GitHubEntry = {
 };
 
 async function archivedZip(addon: MirrorAddon): Promise<NextResponse | null> {
+  if (!addon.path) return null;
+  const repository =
+    addon.archive_repository || "the-jolly-green-bryant/eso-addon-mirror";
   const queue = [addon.path];
   const entries: GitHubEntry[] = [];
   while (queue.length) {
@@ -39,7 +42,7 @@ async function archivedZip(addon: MirrorAddon): Promise<NextResponse | null> {
     if (!path || queue.length + entries.length > MAX_FILES) return null;
     const encodedPath = path.split("/").map(encodeURIComponent).join("/");
     const response = await fetch(
-      `https://api.github.com/repos/the-jolly-green-bryant/eso-addon-mirror/contents/${encodedPath}?ref=main`,
+      `https://api.github.com/repos/${repository}/contents/${encodedPath}?ref=main`,
       {
         ...withTimeout(),
         headers: {

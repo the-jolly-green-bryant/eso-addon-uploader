@@ -48,6 +48,12 @@ type Addon = {
   hardware_platforms?: string[];
   published?: boolean;
   deleted?: boolean;
+  source?: "bethesda" | "esoui";
+  source_url?: string;
+  download_url?: string;
+  archive_repository?: string;
+  archive_path?: string;
+  archived?: boolean;
   status?: string;
   stats?: { totals?: { downloads?: number; subscribes?: number } };
   download?: Array<{
@@ -95,11 +101,14 @@ const samples: Addon[] = [
 const formatCount = (count = 0) =>
   new Intl.NumberFormat("en", { notation: "compact" }).format(count);
 
-const mirrorUrl = (contentId: string) =>
-  `https://github.com/the-jolly-green-bryant/eso-addon-mirror/search?q=${encodeURIComponent(contentId)}&type=code`;
+const mirrorUrl = (addon: Addon) =>
+  addon.archive_repository && addon.archive_path
+    ? `https://github.com/${addon.archive_repository}/tree/main/${addon.archive_path}`
+    : "https://github.com/the-jolly-green-bryant/eso-addon-mirror";
 
-const downloadUrl = (contentId: string) =>
-  `/api/bethesda/download?id=${encodeURIComponent(contentId)}`;
+const downloadUrl = (addon: Addon) =>
+  addon.download_url ||
+  `/api/bethesda/download?id=${encodeURIComponent(addon.content_id)}`;
 
 export function AddonApp({
   initialTab = "explore",
@@ -163,16 +172,7 @@ export function AddonApp({
     loadMine();
   }, [loadMine]);
 
-  const categories = useMemo(
-    () => [
-      "all",
-      "Crafting",
-      "Guild Traders & Vendors",
-      "Libraries",
-      "User Interface",
-    ],
-    [],
-  );
+  const categories = useMemo(() => ["all", "PC Addon", "Console Addon"], []);
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -483,7 +483,7 @@ export function AddonApp({
                   )}
                   <div className="card-actions">
                     <a
-                      href={mirrorUrl(addon.content_id)}
+                      href={mirrorUrl(addon)}
                       target="_blank"
                       rel="noreferrer"
                       onClick={() =>
@@ -497,7 +497,9 @@ export function AddonApp({
                     </a>
                     <a
                       className="card-download"
-                      href={downloadUrl(addon.content_id)}
+                      href={downloadUrl(addon)}
+                      target={addon.download_url ? "_blank" : undefined}
+                      rel={addon.download_url ? "noreferrer" : undefined}
                       download
                       onClick={() =>
                         track("file_download", {

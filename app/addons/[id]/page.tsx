@@ -13,7 +13,7 @@ import {
   withTimeout,
 } from "../../api/bethesda/_client";
 import { decodeHtmlEntities } from "../../../lib/text";
-import { deletedMirrorAddon } from "../../../lib/mirror";
+import { mirrorAddon } from "../../../lib/mirror";
 import Brand from "../../brand";
 import TrackedActions from "./tracked-actions";
 
@@ -28,6 +28,12 @@ type Addon = {
   published?: boolean;
   deleted?: boolean;
   deleted_at?: string;
+  source?: "bethesda" | "esoui";
+  source_url?: string;
+  download_url?: string;
+  archive_repository?: string;
+  archive_path?: string;
+  version?: string;
   stats?: { totals?: { downloads?: number; subscribes?: number } };
   download?: Array<{
     hardware_platform: string;
@@ -39,40 +45,29 @@ type Addon = {
 };
 
 const getAddon = cache(async (id: string): Promise<Addon | null> => {
-  if (!isUuid(id)) return null;
-  const [response, archived] = await Promise.all([
-    fetch(`${API}/content/${encodeURIComponent(id)}`, {
-      ...withTimeout(),
-      headers: bethesdaHeaders(),
-      cache: "no-store",
-    }),
-    deletedMirrorAddon(id),
-  ]);
+  const archived = await mirrorAddon(id);
+  if (!isUuid(id)) return archived;
+  const response = await fetch(`${API}/content/${encodeURIComponent(id)}`, {
+    ...withTimeout(),
+    headers: bethesdaHeaders(),
+    cache: "no-store",
+  });
   if (response.ok) {
     const addon = platformResponse(await jsonFromBethesda(response)) as Addon;
     return archived
-      ? { ...addon, deleted: true, deleted_at: archived.deleted_at }
+      ? { ...archived, ...addon, deleted: archived.deleted }
       : addon;
   }
-  return archived
-    ? {
-        content_id: archived.content_id,
-        title: archived.title,
-        overview:
-          "This addon is no longer listed by Bethesda. Its last mirrored release remains preserved.",
-        deleted: true,
-        deleted_at: archived.deleted_at,
-        published: archived.published,
-        hardware_platforms: ["WINDOWS"],
-      }
-    : null;
+  return archived;
 });
 
 const formatCount = (count = 0) =>
   new Intl.NumberFormat("en", { notation: "compact" }).format(count);
 
-const mirrorUrl = (contentId: string) =>
-  `https://github.com/the-jolly-green-bryant/eso-addon-mirror/search?q=${encodeURIComponent(contentId)}&type=code`;
+const mirrorUrl = (addon: Addon) =>
+  addon.archive_repository && addon.archive_path
+    ? `https://github.com/${addon.archive_repository}/tree/main/${addon.archive_path}`
+    : "https://github.com/the-jolly-green-bryant/eso-addon-mirror";
 
 export async function generateMetadata({
   params,
@@ -177,7 +172,9 @@ export default async function AddonPage({
               <span>subscribers</span>
             </div>
             <div>
-              <strong>{latest?.version_name || "Latest"}</strong>
+              <strong>
+                {latest?.version_name || addon.version || "Latest"}
+              </strong>
               <span>version</span>
             </div>
           </div>
@@ -185,8 +182,11 @@ export default async function AddonPage({
           <TrackedActions
             contentId={addon.content_id}
             title={decodeHtmlEntities(addon.title)}
-            mirrorUrl={mirrorUrl(addon.content_id)}
-            downloadUrl={`/api/bethesda/download?id=${encodeURIComponent(addon.content_id)}`}
+            mirrorUrl={mirrorUrl(addon)}
+            downloadUrl={
+              addon.download_url ||
+              `/api/bethesda/download?id=${encodeURIComponent(addon.content_id)}`
+            }
           />
         </div>
       </article>
