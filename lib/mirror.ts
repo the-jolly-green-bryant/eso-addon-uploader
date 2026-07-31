@@ -1,7 +1,7 @@
 import { isRecord } from "./protocol";
 
 const CATALOG_URL =
-  "https://raw.githubusercontent.com/the-jolly-green-bryant/eso-addon-mirror/main/catalog.json";
+  "https://raw.githubusercontent.com/the-jolly-green-bryant/eso-addon-mirror/refs/heads/main/catalog-index.json";
 
 export type MirrorAddon = {
   content_id: string;

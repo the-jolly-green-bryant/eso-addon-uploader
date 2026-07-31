@@ -31,9 +31,17 @@ import {
   sparklesOutline,
 } from "ionicons/icons";
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Brand from "./brand";
 import { track } from "../lib/analytics";
+import type { CatalogSourceTotals } from "../lib/catalog";
 import { decodeHtmlEntities } from "../lib/text";
 
 setupIonicReact();
@@ -75,6 +83,7 @@ const samples: Addon[] = [
     hardware_platforms: ["WINDOWS", "PLAYSTATION5", "XBOXSERIESX"],
     stats: { totals: { downloads: 410765, subscribes: 40856 } },
     published: true,
+    source: "bethesda",
   },
   {
     content_id: "eeff2a8e-c911-4984-a07f-784c7155ddad",
@@ -85,6 +94,7 @@ const samples: Addon[] = [
     hardware_platforms: ["WINDOWS", "PLAYSTATION5", "XBOXSERIESX"],
     stats: { totals: { downloads: 287421, subscribes: 31204 } },
     published: true,
+    source: "bethesda",
   },
   {
     content_id: "68111c3f-410f-4318-b9ec-582b8c68c374",
@@ -95,6 +105,7 @@ const samples: Addon[] = [
     hardware_platforms: ["WINDOWS"],
     stats: { totals: { downloads: 195310, subscribes: 22518 } },
     published: true,
+    source: "esoui",
   },
 ];
 
@@ -118,6 +129,13 @@ export function AddonApp({
   const tab = initialTab;
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [total, setTotal] = useState(samples.length);
+  const [sourceTotals, setSourceTotals] = useState<CatalogSourceTotals>({
+    bethesda: 2,
+    esoui: 1,
+  });
   const [addons, setAddons] = useState<Addon[]>(samples);
   const [mine, setMine] = useState<Addon[]>([]);
   const [selected, setSelected] = useState<Addon | null>(null);
@@ -126,29 +144,48 @@ export function AddonApp({
   const [editorOpen, setEditorOpen] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const searchRequest = useRef(0);
 
   const search = useCallback(async () => {
+    const request = ++searchRequest.current;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ text: query, size: "30" });
+      const params = new URLSearchParams({
+        text: query,
+        page: String(page),
+        size: "30",
+      });
       if (category !== "all") params.set("categories", category);
       const response = await fetch(`/api/bethesda/catalog?${params}`);
+      if (!response.ok) throw new Error("Catalog request failed");
       const body = await response.json();
+      if (request !== searchRequest.current) return;
       setAddons(Array.isArray(body.data) ? body.data : samples);
+      setTotal(typeof body.total === "number" ? body.total : body.data?.length || 0);
+      setPageCount(typeof body.pageCount === "number" ? body.pageCount : 1);
+      setSourceTotals({
+        bethesda: Number(body.sourceTotals?.bethesda) || 0,
+        esoui: Number(body.sourceTotals?.esoui) || 0,
+      });
       if (query.trim()) {
         track("search", {
           search_term: query.trim(),
           search_category: category,
-          results_count: body.data?.length || 0,
+          results_count: body.total || 0,
+          catalog_page: page,
         });
       }
     } catch {
+      if (request !== searchRequest.current) return;
       setAddons(samples);
-      setNotice("Showing a preview while the Bethesda catalog reconnects.");
+      setTotal(samples.length);
+      setPageCount(1);
+      setSourceTotals({ bethesda: 2, esoui: 1 });
+      setNotice("Showing a preview while the unified catalog reconnects.");
     } finally {
-      setLoading(false);
+      if (request === searchRequest.current) setLoading(false);
     }
-  }, [query, category]);
+  }, [query, category, page]);
 
   useEffect(() => {
     const timer = setTimeout(search, 250);
@@ -396,14 +433,20 @@ export function AddonApp({
             <IonSearchbar
               value={query}
               debounce={0}
-              onIonInput={(event) => setQuery(event.detail.value || "")}
+              onIonInput={(event) => {
+                setQuery(event.detail.value || "");
+                setPage(1);
+              }}
               placeholder="Search titles, descriptions, and authors"
               searchIcon={searchOutline}
             />
             <IonSelect
               value={category}
               aria-label="Category"
-              onIonChange={(event) => setCategory(event.detail.value)}
+              onIonChange={(event) => {
+                setCategory(event.detail.value);
+                setPage(1);
+              }}
             >
               {categories.map((item) => (
                 <IonSelectOption key={item} value={item}>
@@ -411,6 +454,13 @@ export function AddonApp({
                 </IonSelectOption>
               ))}
             </IonSelect>
+            <div className="catalog-status" aria-live="polite">
+              <strong>{total.toLocaleString()} results</strong>
+              <span>{sourceTotals.esoui.toLocaleString()} PC · ESOUI</span>
+              <span>
+                {sourceTotals.bethesda.toLocaleString()} Console · Bethesda
+              </span>
+            </div>
           </div>
         )}
 
@@ -438,6 +488,13 @@ export function AddonApp({
                   </div>
                   <div className="card-copy">
                     <div className="card-meta">
+                      <span
+                        className={`source-badge source-${addon.source || "bethesda"}`}
+                      >
+                        {addon.source === "esoui"
+                          ? "PC · ESOUI"
+                          : "Console · Bethesda"}
+                      </span>
                       <span>
                         {decodeHtmlEntities(
                           addon.categories?.[0] || "Community",
@@ -531,6 +588,31 @@ export function AddonApp({
               </div>
             )}
           </div>
+        )}
+
+        {tab === "explore" && !loading && pageCount > 1 && (
+          <nav className="pagination" aria-label="Addon catalog pages">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              ← Previous
+            </button>
+            <span>
+              Page <strong>{page.toLocaleString()}</strong> of{" "}
+              <strong>{pageCount.toLocaleString()}</strong>
+            </span>
+            <button
+              type="button"
+              disabled={page >= pageCount}
+              onClick={() =>
+                setPage((current) => Math.min(pageCount, current + 1))
+              }
+            >
+              Next →
+            </button>
+          </nav>
         )}
       </section>
 

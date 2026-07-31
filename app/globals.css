@@ -499,6 +499,27 @@ a {
   margin-bottom: 32px;
 }
 
+.catalog-status {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.catalog-status strong {
+  color: var(--text);
+}
+
+.catalog-status span {
+  padding: 4px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
 .filters ion-searchbar {
   --background: var(--panel);
   --border-radius: 9px;
@@ -623,6 +644,21 @@ a {
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.source-badge {
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  letter-spacing: 0.06em;
+}
+
+.source-esoui {
+  color: #8cc7ef;
+}
+
+.source-bethesda {
+  color: var(--gold);
 }
 
 .draft,
@@ -775,6 +811,37 @@ a {
 
 .empty p {
   color: var(--muted);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 34px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pagination button {
+  min-width: 112px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-raised);
+  color: var(--gold-bright);
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: rgba(214, 165, 76, 0.09);
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 ion-modal {
@@ -1425,6 +1492,15 @@ ion-modal {
     grid-template-columns: 1fr;
   }
 
+  .catalog-status {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .catalog-status strong {
+    width: 100%;
+  }
+
   .addon-grid {
     grid-template-columns: 1fr;
   }
@@ -1454,6 +1530,16 @@ ion-modal {
 
   .card-actions a {
     flex: 1;
+  }
+
+  .pagination {
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .pagination button {
+    min-width: 0;
+    padding-inline: 10px;
   }
 
   .modal-card,

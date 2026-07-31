@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { queryCatalog } from "../../../../lib/catalog";
 import { mirrorAddons } from "../../../../lib/mirror";
 
 const boundedInteger = (
@@ -19,28 +20,7 @@ export async function GET(request: NextRequest) {
   const category = (params.get("categories") || "all").toLocaleLowerCase();
   const page = boundedInteger(params.get("page"), 1, 1, 10_000);
   const size = boundedInteger(params.get("size"), 30, 1, 100);
-  const filtered = (await mirrorAddons())
-    .filter((addon) => !addon.deleted)
-    .filter(
-      (addon) =>
-        !text ||
-        addon.title.toLocaleLowerCase().includes(text) ||
-        addon.author_displayname?.toLocaleLowerCase().includes(text) ||
-        addon.content_id.toLocaleLowerCase().includes(text),
-    )
-    .filter(
-      (addon) =>
-        category === "all" ||
-        addon.categories?.some(
-          (entry) => entry.toLocaleLowerCase() === category,
-        ),
-    )
-    .sort((left, right) => left.title.localeCompare(right.title));
-  const offset = (page - 1) * size;
-  return NextResponse.json({
-    data: filtered.slice(offset, offset + size),
-    total: filtered.length,
-    page,
-    size,
-  });
+  return NextResponse.json(
+    queryCatalog(await mirrorAddons(), { text, category, page, size }),
+  );
 }
