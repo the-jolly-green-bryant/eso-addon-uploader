@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">ESO Addon Workshop placeholder</title>
+  <desc id="desc">A dark workshop tile with a gold puzzle piece.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a3033"/>
+      <stop offset="1" stop-color="#0b1518"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0cd72"/>
+      <stop offset="1" stop-color="#b97920"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="18" fill="url(#background)"/>
+  <path d="M0 36h160M0 80h160M0 124h160M36 0v160M80 0v160M124 0v160" stroke="#d6a54c" stroke-opacity=".08"/>
+  <circle cx="126" cy="28" r="50" fill="#5bd78e" fill-opacity=".08"/>
+  <path d="M45 52h20a13 13 0 1 1 22 0h21v20a13 13 0 1 1 0 22v21H87a13 13 0 1 0-22 0H45V94a13 13 0 1 0 0-22z" fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+</svg>

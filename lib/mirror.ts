@@ -17,6 +17,7 @@ export type MirrorAddon = {
   source: "bethesda" | "esoui";
   source_url?: string;
   download_url?: string;
+  image_url?: string;
   archive_repository?: string;
   archive_path?: string;
   path?: string;
@@ -61,6 +62,8 @@ function normalize(value: unknown): MirrorAddon | null {
       typeof value.source_url === "string" ? value.source_url : undefined,
     download_url:
       typeof value.download_url === "string" ? value.download_url : undefined,
+    image_url:
+      typeof value.image_url === "string" ? value.image_url : undefined,
     archive_repository:
       typeof value.archive_repository === "string"
         ? value.archive_repository

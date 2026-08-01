@@ -13,7 +13,9 @@ import {
   withTimeout,
 } from "../../api/bethesda/_client";
 import { decodeHtmlEntities } from "../../../lib/text";
+import { addonImageUrl } from "../../../lib/addon-images";
 import { mirrorAddon } from "../../../lib/mirror";
+import AddonImage from "../../addon-image";
 import Brand from "../../brand";
 import TrackedActions from "./tracked-actions";
 
@@ -31,6 +33,9 @@ type Addon = {
   source?: "bethesda" | "esoui";
   source_url?: string;
   download_url?: string;
+  image_url?: string;
+  images?: unknown[];
+  media?: unknown;
   archive_repository?: string;
   archive_path?: string;
   version?: string;
@@ -120,9 +125,11 @@ export default async function AddonPage({
 
       <article className="standalone-detail">
         <div className="detail-banner">
-          <div className="detail-sigil">
-            {decodeHtmlEntities(addon.title).slice(0, 1)}
-          </div>
+          <AddonImage
+            className="detail-artwork"
+            imageUrl={addonImageUrl(addon)}
+            title={decodeHtmlEntities(addon.title)}
+          />
         </div>
         <div className="detail-body">
           <p className="eyebrow">

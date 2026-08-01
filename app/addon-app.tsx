@@ -41,7 +41,9 @@ import {
   useState,
 } from "react";
 import Brand from "./brand";
+import AddonImage from "./addon-image";
 import { track } from "../lib/analytics";
+import { addonImageUrl } from "../lib/addon-images";
 import type { CatalogSourceTotals } from "../lib/catalog";
 import { decodeHtmlEntities } from "../lib/text";
 
@@ -60,6 +62,9 @@ type Addon = {
   source?: "bethesda" | "esoui";
   source_url?: string;
   download_url?: string;
+  image_url?: string;
+  images?: unknown[];
+  media?: unknown;
   archive_repository?: string;
   archive_path?: string;
   archived?: boolean;
@@ -341,6 +346,24 @@ export function AddonApp({
           </a>
         </nav>
         <div className="header-actions">
+          <label className="platform-switcher">
+            <span className="sr-only">Addon platform</span>
+            <select
+              aria-label="Addon platform"
+              value={platform}
+              onChange={(event) => {
+                const nextPlatform = event.target.value as AddonPlatform;
+                setPage(1);
+                track("addon_platform_changed", {
+                  addon_platform: nextPlatform,
+                });
+                router.push(`/${nextPlatform}`);
+              }}
+            >
+              <option value="console">Console</option>
+              <option value="pc-mac">PC / Mac</option>
+            </select>
+          </label>
           <a
             className="source-link"
             href="https://github.com/the-jolly-green-bryant/eso-addon-uploader"
@@ -465,21 +488,6 @@ export function AddonApp({
               placeholder="Search titles, descriptions, and authors"
               searchIcon={searchOutline}
             />
-            <IonSelect
-              value={platform}
-              aria-label="Addon platform"
-              onIonChange={(event) => {
-                const nextPlatform = event.detail.value as AddonPlatform;
-                setPage(1);
-                track("addon_platform_changed", {
-                  addon_platform: nextPlatform,
-                });
-                router.push(`/${nextPlatform}`);
-              }}
-            >
-              <IonSelectOption value="console">Console</IonSelectOption>
-              <IonSelectOption value="pc-mac">PC / Mac</IonSelectOption>
-            </IonSelect>
             <div className="catalog-status" aria-live="polite">
               <strong>{total.toLocaleString()} results</strong>
               {platform === "pc-mac" ? (
@@ -501,7 +509,7 @@ export function AddonApp({
           </div>
         ) : (
           <div className="addon-grid">
-            {visible.map((addon, index) => (
+            {visible.map((addon) => (
               <article className="addon-card" key={addon.content_id}>
                 <Link
                   className="card-main"
@@ -514,9 +522,11 @@ export function AddonApp({
                     })
                   }
                 >
-                  <div className={`sigil sigil-${index % 4}`}>
-                    {decodeHtmlEntities(addon.title).slice(0, 1)}
-                  </div>
+                  <AddonImage
+                    className="addon-thumbnail"
+                    imageUrl={addonImageUrl(addon)}
+                    title={decodeHtmlEntities(addon.title)}
+                  />
                   <div className="card-copy">
                     <div className="card-meta">
                       <span
