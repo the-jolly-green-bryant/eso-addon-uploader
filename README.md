@@ -29,9 +29,9 @@ ESO Addon Workshop exists because neither limitation is necessary. A browser can
 provide a cross-platform experience, and a public implementation can make the
 entire path from user action to upstream request reviewable.
 
-## Open source is the trust model
+## Source transparency is the trust model
 
-Open source does not eliminate trust. It makes trust specific and testable.
+Published source does not eliminate trust. It makes trust specific and testable.
 
 With ESO Addon Workshop, anyone can inspect:
 
@@ -50,8 +50,7 @@ are bounded and checked for unsafe archive paths.
 That still leaves real trust boundaries. Users of the hosted service trust its
 operator, GitHub Actions, AWS, Cloudflare, and Bethesda. Those boundaries are
 named plainly because security claims are useful only when their limits are
-also visible. Anyone who wants a different trust boundary can audit the code
-and operate an independent deployment.
+also visible. Anyone can audit the published code and report concerns.
 
 ## Why a website
 
@@ -93,8 +92,8 @@ changes. The project will not disguise that uncertainty as a guarantee.
   as official documentation.
 - **Minimal sensitive data.** Credentials, tokens, archives, and analytics
   should be handled only as required for a user-requested action.
-- **No lock-in.** The source and deployment model should allow independent
-  review, contribution, and operation.
+- **Independent review.** The published source should support meaningful
+  auditing and responsible disclosure.
 
 ## Privacy without euphemisms
 
@@ -116,5 +115,5 @@ where they can be maintained as task-oriented references.
 
 Security concerns can be reported through
 [`SECURITY.md`](https://github.com/the-jolly-green-bryant/eso-addon-uploader/blob/main/SECURITY.md).
-The project is available under the
-[`MIT License`](https://github.com/the-jolly-green-bryant/eso-addon-uploader/blob/main/LICENSE).
+The source is published for transparency and portfolio purposes under an
+[`All Rights Reserved license`](https://github.com/the-jolly-green-bryant/eso-addon-uploader/blob/main/LICENSE).
