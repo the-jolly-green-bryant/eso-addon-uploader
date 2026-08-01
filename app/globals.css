@@ -331,25 +331,29 @@ a {
   overflow: hidden;
   padding: 76px clamp(24px, 7vw, 110px);
   border-bottom: 1px solid var(--line);
-  background:
+  background-color: var(--night);
+  background-image:
     linear-gradient(
-      100deg,
-      rgba(7, 14, 17, 0.98) 0%,
-      rgba(7, 14, 17, 0.84) 56%,
-      rgba(10, 28, 23, 0.72) 100%
+      90deg,
+      rgba(5, 10, 13, 0.99) 0%,
+      rgba(5, 10, 13, 0.93) 36%,
+      rgba(5, 10, 13, 0.72) 62%,
+      rgba(5, 10, 13, 0.34) 100%
     ),
-    radial-gradient(
-      circle at 82% 36%,
-      rgba(71, 169, 111, 0.28),
-      transparent 26rem
+    image-set(
+      url("/workshop-hero.avif") type("image/avif"),
+      url("/workshop-hero.webp") type("image/webp")
     ),
-    var(--night);
+    linear-gradient(135deg, #071013, #132720);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .hero::before {
   position: absolute;
   inset: 0;
-  opacity: 0.12;
+  opacity: 0.06;
   background-image:
     linear-gradient(var(--line-soft) 1px, transparent 1px),
     linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
@@ -364,11 +368,11 @@ a {
   right: 9%;
   width: 280px;
   height: 280px;
-  border: 1px solid rgba(214, 165, 76, 0.16);
+  border: 1px solid rgba(214, 165, 76, 0.1);
   border-radius: 50%;
   box-shadow:
-    0 0 0 70px rgba(214, 165, 76, 0.03),
-    0 0 0 140px rgba(214, 165, 76, 0.02);
+    0 0 0 70px rgba(214, 165, 76, 0.018),
+    0 0 0 140px rgba(214, 165, 76, 0.012);
   content: "";
 }
 
@@ -416,9 +420,9 @@ a {
   max-width: 500px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(10, 20, 23, 0.86);
+  background: rgba(7, 14, 17, 0.76);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(10px);
 }
 
 .hero-workbench > div {
@@ -1386,6 +1390,19 @@ ion-modal {
     grid-template-columns: 1fr;
     gap: 44px;
     padding-block: 64px;
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(5, 10, 13, 0.87),
+        rgba(5, 10, 13, 0.74) 48%,
+        rgba(5, 10, 13, 0.91)
+      ),
+      image-set(
+        url("/workshop-hero.avif") type("image/avif"),
+        url("/workshop-hero.webp") type("image/webp")
+      ),
+      linear-gradient(135deg, #071013, #132720);
+    background-position: 78% center;
   }
 
   .hero-copy {
