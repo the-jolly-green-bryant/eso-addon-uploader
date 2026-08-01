@@ -4,7 +4,7 @@ import "./docs.css";
 export const metadata: Metadata = {
   title: "Developer API — ESO Addon Workshop",
   description:
-    "API reference, protocol notes, and integration guides for the open-source ESO addon uploader.",
+    "API reference, protocol notes, and integration guides for the publicly inspectable ESO addon uploader.",
 };
 
 export default function DocsLayout({

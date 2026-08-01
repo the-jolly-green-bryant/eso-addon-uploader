@@ -354,7 +354,7 @@ export function AddonApp({
             href="https://github.com/the-jolly-green-bryant/eso-addon-uploader"
             target="_blank"
             rel="noreferrer"
-            aria-label="View the open-source ESO Addon Workshop code on GitHub"
+            aria-label="View the publicly inspectable ESO Addon Workshop code on GitHub"
           >
             <IonIcon icon={logoGithub} />
             <span>GitHub</span>
