@@ -28,12 +28,14 @@ test("paginates one alphabetized catalog across Bethesda and ESOUI", () => {
   const first = queryCatalog(addons, {
     text: "",
     category: "all",
+    platform: "all",
     page: 1,
     size: 2,
   });
   const second = queryCatalog(addons, {
     text: "",
     category: "all",
+    platform: "all",
     page: 2,
     size: 2,
   });
@@ -51,6 +53,7 @@ test("searches both sources before slicing the requested page", () => {
   const results = queryCatalog(addons, {
     text: "Shared Author",
     category: "all",
+    platform: "all",
     page: 1,
     size: 30,
   });
@@ -62,15 +65,31 @@ test("searches both sources before slicing the requested page", () => {
   assert.deepEqual(results.sourceTotals, { bethesda: 1, esoui: 1 });
 });
 
-test("identifies PC addons through the ESOUI category", () => {
+test("filters PC and Mac addons before paginating", () => {
   const results = queryCatalog(addons, {
     text: "",
-    category: "PC Addon",
+    category: "all",
+    platform: "pc-mac",
+    page: 1,
+    size: 1,
+  });
+
+  assert.equal(results.total, 2);
+  assert.equal(results.pageCount, 2);
+  assert.ok(results.data.every((entry) => entry.source === "esoui"));
+  assert.deepEqual(results.sourceTotals, { bethesda: 0, esoui: 2 });
+});
+
+test("filters console addons before searching", () => {
+  const results = queryCatalog(addons, {
+    text: "Shared Author",
+    category: "all",
+    platform: "console",
     page: 1,
     size: 30,
   });
 
-  assert.equal(results.total, 2);
-  assert.ok(results.data.every((entry) => entry.source === "esoui"));
-  assert.deepEqual(results.sourceTotals, { bethesda: 0, esoui: 2 });
+  assert.equal(results.total, 1);
+  assert.equal(results.data[0]?.source, "bethesda");
+  assert.deepEqual(results.sourceTotals, { bethesda: 1, esoui: 0 });
 });

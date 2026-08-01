@@ -5,9 +5,12 @@ export type CatalogSourceTotals = {
   esoui: number;
 };
 
+export type CatalogPlatform = "all" | "console" | "pc-mac";
+
 type CatalogQuery = {
   text: string;
   category: string;
+  platform?: CatalogPlatform;
   page: number;
   size: number;
 };
@@ -15,8 +18,15 @@ type CatalogQuery = {
 export function queryCatalog(addons: MirrorAddon[], query: CatalogQuery) {
   const text = query.text.trim().toLocaleLowerCase();
   const category = query.category.toLocaleLowerCase();
+  const platform = query.platform ?? "all";
   const filtered = addons
     .filter((addon) => !addon.deleted)
+    .filter(
+      (addon) =>
+        platform === "all" ||
+        (platform === "console" && addon.source === "bethesda") ||
+        (platform === "pc-mac" && addon.source === "esoui"),
+    )
     .filter((addon) => {
       if (!text) return true;
       return [

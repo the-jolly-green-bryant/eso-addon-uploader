@@ -109,6 +109,23 @@ const samples: Addon[] = [
   },
 ];
 
+type AddonPlatform = "console" | "pc-mac";
+
+const initialPlatform = (): AddonPlatform => {
+  if (typeof window === "undefined") return "console";
+  return new URLSearchParams(window.location.search).get("platform") ===
+    "pc-mac"
+    ? "pc-mac"
+    : "console";
+};
+
+const samplesForPlatform = (platform: AddonPlatform) =>
+  samples.filter((addon) =>
+    platform === "pc-mac"
+      ? addon.source === "esoui"
+      : addon.source === "bethesda",
+  );
+
 const formatCount = (count = 0) =>
   new Intl.NumberFormat("en", { notation: "compact" }).format(count);
 
@@ -128,15 +145,18 @@ export function AddonApp({
 }) {
   const tab = initialTab;
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
+  const [platform, setPlatform] = useState<AddonPlatform>(initialPlatform);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
-  const [total, setTotal] = useState(samples.length);
-  const [sourceTotals, setSourceTotals] = useState<CatalogSourceTotals>({
-    bethesda: 2,
-    esoui: 1,
-  });
-  const [addons, setAddons] = useState<Addon[]>(samples);
+  const [total, setTotal] = useState(() => samplesForPlatform(platform).length);
+  const [sourceTotals, setSourceTotals] = useState<CatalogSourceTotals>(() =>
+    platform === "pc-mac"
+      ? { bethesda: 0, esoui: samplesForPlatform(platform).length }
+      : { bethesda: samplesForPlatform(platform).length, esoui: 0 },
+  );
+  const [addons, setAddons] = useState<Addon[]>(() =>
+    samplesForPlatform(platform),
+  );
   const [mine, setMine] = useState<Addon[]>([]);
   const [selected, setSelected] = useState<Addon | null>(null);
   const [loading, setLoading] = useState(false);
@@ -152,10 +172,10 @@ export function AddonApp({
     try {
       const params = new URLSearchParams({
         text: query,
+        platform,
         page: String(page),
         size: "30",
       });
-      if (category !== "all") params.set("categories", category);
       const response = await fetch(`/api/bethesda/catalog?${params}`);
       if (!response.ok) throw new Error("Catalog request failed");
       const body = await response.json();
@@ -170,22 +190,33 @@ export function AddonApp({
       if (query.trim()) {
         track("search", {
           search_term: query.trim(),
-          search_category: category,
+          addon_platform: platform,
           results_count: body.total || 0,
           catalog_page: page,
         });
       }
     } catch {
       if (request !== searchRequest.current) return;
-      setAddons(samples);
-      setTotal(samples.length);
+      const fallback = samplesForPlatform(platform);
+      setAddons(fallback);
+      setTotal(fallback.length);
       setPageCount(1);
-      setSourceTotals({ bethesda: 2, esoui: 1 });
+      setSourceTotals(
+        platform === "pc-mac"
+          ? { bethesda: 0, esoui: fallback.length }
+          : { bethesda: fallback.length, esoui: 0 },
+      );
       setNotice("Showing a preview while the unified catalog reconnects.");
     } finally {
       if (request === searchRequest.current) setLoading(false);
     }
-  }, [query, category, page]);
+  }, [query, platform, page]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("platform", platform);
+    window.history.replaceState(window.history.state, "", url);
+  }, [platform]);
 
   useEffect(() => {
     const timer = setTimeout(search, 250);
@@ -209,7 +240,7 @@ export function AddonApp({
     loadMine();
   }, [loadMine]);
 
-  const categories = useMemo(() => ["all", "PC Addon", "Console Addon"], []);
+  const categories = useMemo(() => ["PC Addon", "Console Addon"], []);
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -413,7 +444,9 @@ export function AddonApp({
             <h2>
               {tab === "mine"
                 ? `${mine.length} addons on your workbench`
-                : "Find your next essential"}
+                : platform === "pc-mac"
+                  ? "Find your next PC / Mac essential"
+                  : "Find your next console essential"}
             </h2>
           </div>
           {tab === "mine" && (
@@ -441,25 +474,31 @@ export function AddonApp({
               searchIcon={searchOutline}
             />
             <IonSelect
-              value={category}
-              aria-label="Category"
+              value={platform}
+              aria-label="Addon platform"
               onIonChange={(event) => {
-                setCategory(event.detail.value);
+                const nextPlatform = event.detail.value as AddonPlatform;
+                setPlatform(nextPlatform);
                 setPage(1);
+                track("addon_platform_changed", {
+                  addon_platform: nextPlatform,
+                });
               }}
             >
-              {categories.map((item) => (
-                <IonSelectOption key={item} value={item}>
-                  {item === "all" ? "All categories" : item}
-                </IonSelectOption>
-              ))}
+              <IonSelectOption value="console">Console</IonSelectOption>
+              <IonSelectOption value="pc-mac">PC / Mac</IonSelectOption>
             </IonSelect>
             <div className="catalog-status" aria-live="polite">
               <strong>{total.toLocaleString()} results</strong>
-              <span>{sourceTotals.esoui.toLocaleString()} PC · ESOUI</span>
-              <span>
-                {sourceTotals.bethesda.toLocaleString()} Console · Bethesda
-              </span>
+              {platform === "pc-mac" ? (
+                <span>
+                  {sourceTotals.esoui.toLocaleString()} PC / Mac · ESOUI
+                </span>
+              ) : (
+                <span>
+                  {sourceTotals.bethesda.toLocaleString()} Console · Bethesda
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -474,7 +513,7 @@ export function AddonApp({
               <article className="addon-card" key={addon.content_id}>
                 <Link
                   className="card-main"
-                  href={`/addons/${encodeURIComponent(addon.content_id)}`}
+                  href={`/addons/${encodeURIComponent(addon.content_id)}?platform=${platform}`}
                   onClick={() =>
                     track("select_content", {
                       content_type: "addon",
@@ -578,7 +617,7 @@ export function AddonApp({
                 <h3>
                   {tab === "mine"
                     ? "Your workbench is clear"
-                    : "No addons found"}
+                    : `No ${platform === "pc-mac" ? "PC / Mac" : "console"} addons found`}
                 </h3>
                 <p>
                   {tab === "mine"
@@ -727,7 +766,7 @@ export function AddonApp({
                 labelPlacement="stacked"
                 fill="outline"
               >
-                {categories.slice(1).map((item) => (
+                {categories.map((item) => (
                   <IonSelectOption key={item}>{item}</IonSelectOption>
                 ))}
               </IonSelect>
