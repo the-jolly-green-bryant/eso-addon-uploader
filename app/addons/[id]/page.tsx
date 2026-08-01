@@ -97,16 +97,13 @@ export async function generateMetadata({
 
 export default async function AddonPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ platform?: string }>;
 }) {
   const addon = await getAddon((await params).id);
   if (!addon) notFound();
 
-  const requestedPlatform = (await searchParams).platform;
-  const backPlatform = requestedPlatform === "pc-mac" ? "pc-mac" : "console";
+  const backPlatform = addon.source === "esoui" ? "pc-mac" : "console";
 
   const latest = addon.download?.find(
     (entry) => entry.hardware_platform === "WINDOWS",
@@ -116,7 +113,7 @@ export default async function AddonPage({
     <main className="addon-page">
       <header className="detail-topbar">
         <Brand />
-        <Link className="back-link" href={`/?platform=${backPlatform}`}>
+        <Link className="back-link" href={`/${backPlatform}`}>
           ← Back to addons
         </Link>
       </header>

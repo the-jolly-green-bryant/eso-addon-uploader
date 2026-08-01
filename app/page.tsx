@@ -1,5 +1,10 @@
-import AddonApp from "./addon-app-loader";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return <AddonApp />;
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ platform?: string }>;
+}) {
+  const requestedPlatform = (await searchParams).platform;
+  redirect(requestedPlatform === "pc-mac" ? "/pc-mac" : "/console");
 }

@@ -58,7 +58,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     {
-      url: origin,
+      url: `${origin}/console`,
+      changeFrequency: "daily",
+      priority: 1,
+    },
+    {
+      url: `${origin}/pc-mac`,
       changeFrequency: "daily",
       priority: 1,
     },

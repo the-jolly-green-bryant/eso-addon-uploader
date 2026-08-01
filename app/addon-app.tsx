@@ -31,6 +31,7 @@ import {
   sparklesOutline,
 } from "ionicons/icons";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FormEvent,
   useCallback,
@@ -109,15 +110,7 @@ const samples: Addon[] = [
   },
 ];
 
-type AddonPlatform = "console" | "pc-mac";
-
-const initialPlatform = (): AddonPlatform => {
-  if (typeof window === "undefined") return "console";
-  return new URLSearchParams(window.location.search).get("platform") ===
-    "pc-mac"
-    ? "pc-mac"
-    : "console";
-};
+export type AddonPlatform = "console" | "pc-mac";
 
 const samplesForPlatform = (platform: AddonPlatform) =>
   samples.filter((addon) =>
@@ -140,12 +133,14 @@ const downloadUrl = (addon: Addon) =>
 
 export function AddonApp({
   initialTab = "explore",
+  platform = "console",
 }: {
   initialTab?: "explore" | "mine";
+  platform?: AddonPlatform;
 }) {
+  const router = useRouter();
   const tab = initialTab;
   const [query, setQuery] = useState("");
-  const [platform, setPlatform] = useState<AddonPlatform>(initialPlatform);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
   const [total, setTotal] = useState(() => samplesForPlatform(platform).length);
@@ -211,12 +206,6 @@ export function AddonApp({
       if (request === searchRequest.current) setLoading(false);
     }
   }, [query, platform, page]);
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("platform", platform);
-    window.history.replaceState(window.history.state, "", url);
-  }, [platform]);
 
   useEffect(() => {
     const timer = setTimeout(search, 250);
@@ -338,7 +327,10 @@ export function AddonApp({
       <header className="topbar">
         <Brand />
         <nav aria-label="Primary">
-          <Link className={tab === "explore" ? "active" : ""} href="/">
+          <Link
+            className={tab === "explore" ? "active" : ""}
+            href={`/${platform}`}
+          >
             Explore
           </Link>
           <Link className={tab === "mine" ? "active" : ""} href="/my-addons">
@@ -381,7 +373,7 @@ export function AddonApp({
       <section className="hero">
         <div className="hero-copy">
           <IonChip>
-            <IonIcon icon={sparklesOutline} /> Open-source addon platform
+            <IonIcon icon={sparklesOutline} /> Transparent addon platform
           </IonChip>
           <h1>
             {tab === "mine"
@@ -478,11 +470,11 @@ export function AddonApp({
               aria-label="Addon platform"
               onIonChange={(event) => {
                 const nextPlatform = event.detail.value as AddonPlatform;
-                setPlatform(nextPlatform);
                 setPage(1);
                 track("addon_platform_changed", {
                   addon_platform: nextPlatform,
                 });
+                router.push(`/${nextPlatform}`);
               }}
             >
               <IonSelectOption value="console">Console</IonSelectOption>
@@ -513,7 +505,7 @@ export function AddonApp({
               <article className="addon-card" key={addon.content_id}>
                 <Link
                   className="card-main"
-                  href={`/addons/${encodeURIComponent(addon.content_id)}?platform=${platform}`}
+                  href={`/addons/${encodeURIComponent(addon.content_id)}`}
                   onClick={() =>
                     track("select_content", {
                       content_type: "addon",
