@@ -593,6 +593,113 @@ a {
   border-radius: 9px;
 }
 
+.catalog-search {
+  position: relative;
+  z-index: 20;
+}
+
+.addon-autocomplete {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 7px);
+  right: 0;
+  left: 0;
+  max-height: min(420px, calc(100dvh - 180px));
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(214, 165, 76, 0.48);
+  border-radius: 10px;
+  background: rgba(7, 14, 17, 0.98);
+  box-shadow: 0 24px 62px rgba(0, 0, 0, 0.58);
+}
+
+.addon-autocomplete button,
+.addon-autocomplete-status {
+  display: grid;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+}
+
+.addon-autocomplete button {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  cursor: pointer;
+}
+
+.addon-autocomplete button:hover,
+.addon-autocomplete button:focus-visible,
+.addon-autocomplete button.is-active {
+  background: rgba(214, 165, 76, 0.13);
+  outline: 1px solid rgba(214, 165, 76, 0.28);
+}
+
+.addon-autocomplete button > img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border: 1px solid rgba(214, 165, 76, 0.34);
+  border-radius: 7px;
+  background: #15272b;
+}
+
+.addon-autocomplete button > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.addon-autocomplete strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addon-autocomplete small,
+.addon-autocomplete em {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.addon-autocomplete em {
+  padding: 4px 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.addon-autocomplete-status {
+  grid-template-columns: auto 1fr;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.addon-autocomplete-term {
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  margin-top: 4px;
+  border-top: 1px solid var(--line-soft) !important;
+}
+
+.addon-autocomplete-term ion-icon {
+  justify-self: center;
+  color: var(--gold);
+  font-size: 20px;
+}
+
+.addon-autocomplete-term strong {
+  color: var(--gold-bright);
+}
+
 .loading {
   display: grid;
   min-height: 320px;
@@ -1541,6 +1648,23 @@ ion-modal {
     grid-template-columns: 1fr;
     gap: 6px;
     margin-bottom: 12px;
+  }
+
+  .addon-autocomplete {
+    max-height: min(330px, calc(100dvh - 150px));
+  }
+
+  .addon-autocomplete button {
+    min-height: 52px;
+  }
+
+  .addon-autocomplete button > img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .addon-autocomplete em {
+    display: none;
   }
 
   .catalog-status {

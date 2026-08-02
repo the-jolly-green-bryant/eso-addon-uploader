@@ -34,6 +34,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   FormEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -164,7 +165,11 @@ export function AddonApp({
   const [editorOpen, setEditorOpen] = useState(false);
   const [account, setAccount] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const [resultKey, setResultKey] = useState(`${platform}:`);
   const searchRequest = useRef(0);
+  const searchbarRef = useRef<HTMLIonSearchbarElement>(null);
 
   const search = useCallback(async () => {
     const request = ++searchRequest.current;
@@ -181,6 +186,7 @@ export function AddonApp({
       const body = await response.json();
       if (request !== searchRequest.current) return;
       setAddons(Array.isArray(body.data) ? body.data : samples);
+      setResultKey(`${platform}:${query.trim().toLocaleLowerCase()}`);
       setTotal(typeof body.total === "number" ? body.total : body.data?.length || 0);
       setPageCount(typeof body.pageCount === "number" ? body.pageCount : 1);
       setSourceTotals({
@@ -199,6 +205,7 @@ export function AddonApp({
       if (request !== searchRequest.current) return;
       const fallback = samplesForPlatform(platform);
       setAddons(fallback);
+      setResultKey(`${platform}:${query.trim().toLocaleLowerCase()}`);
       setTotal(fallback.length);
       setPageCount(1);
       setSourceTotals(
@@ -326,6 +333,61 @@ export function AddonApp({
   }
 
   const visible = tab === "mine" ? mine : addons;
+  const normalizedQuery = query.trim();
+  const currentResultKey = `${platform}:${normalizedQuery.toLocaleLowerCase()}`;
+  const suggestions =
+    resultKey === currentResultKey ? addons.slice(0, 6) : [];
+  const showAutocomplete =
+    tab === "explore" && searchFocused && normalizedQuery.length >= 2;
+
+  function dismissSearchKeyboard() {
+    setSearchFocused(false);
+    setActiveSuggestion(-1);
+    void searchbarRef.current?.getInputElement().then((input) => input.blur());
+  }
+
+  function openSearchResult(addon: Addon) {
+    dismissSearchKeyboard();
+    track("select_content", {
+      content_type: "addon",
+      item_id: addon.content_id,
+      item_name: decodeHtmlEntities(addon.title),
+      item_list_name: "search_autocomplete",
+    });
+    router.push(`/addons/${encodeURIComponent(addon.content_id)}`);
+  }
+
+  function handleSearchKeyDown(event: ReactKeyboardEvent) {
+    if (!showAutocomplete) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestion((current) =>
+        Math.min(current + 1, suggestions.length),
+      );
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestion((current) => Math.max(current - 1, -1));
+      return;
+    }
+
+    if (event.key === "Escape") {
+      dismissSearchKeyboard();
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (activeSuggestion >= 0 && activeSuggestion < suggestions.length) {
+        openSearchResult(suggestions[activeSuggestion]);
+      } else {
+        dismissSearchKeyboard();
+      }
+    }
+  }
 
   return (
     <main>
@@ -478,16 +540,85 @@ export function AddonApp({
 
         {tab === "explore" && (
           <div className="filters">
-            <IonSearchbar
-              value={query}
-              debounce={0}
-              onIonInput={(event) => {
-                setQuery(event.detail.value || "");
-                setPage(1);
-              }}
-              placeholder="Search titles, descriptions, and authors"
-              searchIcon={searchOutline}
-            />
+            <div className="catalog-search" onKeyDown={handleSearchKeyDown}>
+              <IonSearchbar
+                ref={searchbarRef}
+                value={query}
+                debounce={0}
+                onIonFocus={() => setSearchFocused(true)}
+                onIonBlur={() => setSearchFocused(false)}
+                onIonInput={(event) => {
+                  setQuery(event.detail.value || "");
+                  setPage(1);
+                  setActiveSuggestion(-1);
+                }}
+                placeholder="Search titles, descriptions, and authors"
+                searchIcon={searchOutline}
+              />
+
+              {showAutocomplete && (
+                <div
+                  className="addon-autocomplete"
+                  role="listbox"
+                  aria-label="Addon search suggestions"
+                  onPointerDown={(event) => event.preventDefault()}
+                >
+                  {(loading || resultKey !== currentResultKey) &&
+                  !suggestions.length ? (
+                    <div className="addon-autocomplete-status">
+                      <IonSpinner /> Searching the catalog…
+                    </div>
+                  ) : (
+                    suggestions.map((addon, index) => (
+                      <button
+                        aria-selected={activeSuggestion === index}
+                        className={activeSuggestion === index ? "is-active" : ""}
+                        key={addon.content_id}
+                        onClick={() => openSearchResult(addon)}
+                        role="option"
+                        type="button"
+                      >
+                        <AddonImage
+                          imageUrl={addonImageUrl(addon)}
+                          title={decodeHtmlEntities(addon.title)}
+                        />
+                        <span>
+                          <strong>{decodeHtmlEntities(addon.title)}</strong>
+                          <small>
+                            {decodeHtmlEntities(
+                              addon.author_displayname || "Unknown artisan",
+                            )}
+                          </small>
+                        </span>
+                        <em>
+                          {addon.source === "esoui" ? "PC / Mac" : "Console"}
+                        </em>
+                      </button>
+                    ))
+                  )}
+
+                  <button
+                    aria-selected={activeSuggestion === suggestions.length}
+                    className={`addon-autocomplete-term${
+                      activeSuggestion === suggestions.length ? " is-active" : ""
+                    }`}
+                    onClick={dismissSearchKeyboard}
+                    role="option"
+                    type="button"
+                  >
+                    <IonIcon icon={searchOutline} />
+                    <span>
+                      <strong>Search for “{normalizedQuery}”</strong>
+                      <small>
+                        {resultKey === currentResultKey
+                          ? `Show all ${total.toLocaleString()} matches`
+                          : "Show every matching addon"}
+                      </small>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="catalog-status" aria-live="polite">
               <strong>{total.toLocaleString()} results</strong>
               {platform === "pc-mac" ? (
