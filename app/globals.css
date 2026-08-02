@@ -1530,6 +1530,7 @@ ion-modal {
 
   .catalog-head {
     align-items: flex-start;
+    margin-bottom: 18px;
   }
 
   .catalog h2 {
@@ -1538,15 +1539,26 @@ ion-modal {
 
   .filters {
     grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
   }
 
   .catalog-status {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    min-height: 22px;
+    align-items: center;
+    gap: 6px;
+    padding-inline: 2px;
+    white-space: nowrap;
   }
 
   .catalog-status strong {
-    width: 100%;
+    width: auto;
+  }
+
+  .catalog-status span {
+    overflow: hidden;
+    padding: 2px 6px;
+    text-overflow: ellipsis;
   }
 
   .addon-grid {
